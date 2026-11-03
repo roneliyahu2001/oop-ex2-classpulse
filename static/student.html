@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ClassPulse</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header>
+    <div><h1>ClassPulse</h1><div class="sub" id="sessionTitle">Student</div></div>
+    <span class="muted" id="netStatus"></span>
+  </header>
+  <main style="max-width:560px">
+    <div id="banner"></div>
+
+    <section class="card hidden" id="noSession">
+      <h2>Welcome</h2>
+      <p>Scan the QR code on the lecturer's screen with your phone camera to check in.</p>
+    </section>
+
+    <section class="card hidden" id="checkinCard">
+      <h2>Check in</h2>
+      <form id="checkinForm">
+        <label for="sid">Student ID</label>
+        <input id="sid" inputmode="numeric" autocomplete="off" required pattern="\d{5,10}">
+        <label for="sname">Full name</label>
+        <input id="sname" autocomplete="name" required>
+        <button class="primary big" type="submit">I'm here</button>
+      </form>
+      <p class="muted">Saved on this phone, so next time scanning is enough.</p>
+      <div id="checkinMsg"></div>
+    </section>
+
+    <section id="classView" class="hidden">
+      <div class="tabs">
+        <button data-tab="poll" class="active">Poll</button>
+        <button data-tab="comments">Comments</button>
+        <button data-tab="homework">Homework</button>
+      </div>
+
+      <div class="card" data-pane="poll">
+        <h2 id="pollQuestion">No active poll</h2>
+        <div id="pollOptions"><p class="muted">When the lecturer opens a poll, it appears here.</p></div>
+      </div>
+
+      <div class="card hidden" data-pane="comments">
+        <h2>Questions & suggestions</h2>
+        <form id="commentForm">
+          <textarea id="commentText" maxlength="500" placeholder="Ask a question or suggest something…" required></textarea>
+          <label class="row" style="color:var(--text)"><input type="checkbox" id="anon" style="width:auto" checked> Post anonymously</label>
+          <button class="primary big" type="submit">Send</button>
+        </form>
+        <div id="commentMsg"></div>
+        <div id="comments"></div>
+      </div>
+
+      <div class="card hidden" data-pane="homework">
+        <h2>Homework review</h2>
+        <p class="muted">Paste your answer. You get feedback and an anonymous comparison with the class.</p>
+        <label for="hwTask">Assignment question (optional)</label>
+        <input id="hwTask">
+        <label for="hwText">Your answer</label>
+        <textarea id="hwText" style="min-height:160px"></textarea>
+        <button class="primary big" id="hwSubmit">Submit & review</button>
+        <div id="hwMsg"></div>
+        <div id="hwResult"></div>
+      </div>
+    </section>
+  </main>
+  <script src="/static/common.js"></script>
+  <script src="/static/student.js"></script>
+</body>
+</html>

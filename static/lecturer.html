@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ClassPulse Lecturer</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header>
+    <div><h1>ClassPulse · Lecturer</h1><div class="sub" id="headerSub">Dashboard</div></div>
+    <div class="row">
+      <select id="sessionPicker" style="width:auto"></select>
+      <button class="danger hidden" id="endBtn">End class</button>
+    </div>
+  </header>
+  <main>
+    <section class="card hidden" id="loginCard" style="max-width:380px;margin:40px auto">
+      <h2>Lecturer login</h2>
+      <form id="loginForm">
+        <label for="pin">PIN (printed in the server console)</label>
+        <input id="pin" type="password" inputmode="numeric" autofocus>
+        <button class="primary big">Log in</button>
+      </form>
+      <div id="loginMsg"></div>
+    </section>
+
+    <section class="card hidden" id="startCard" style="max-width:520px">
+      <h2>Start a class</h2>
+      <form id="startForm" class="row">
+        <input id="title" placeholder="e.g. OOP – Lecture 5: Design patterns" required>
+        <button class="primary">Start</button>
+      </form>
+    </section>
+
+    <section id="dash" class="hidden">
+      <div class="grid">
+        <div class="card qr-box" id="qrCard">
+          <h2 style="align-self:flex-start">Scan to check in</h2>
+          <div id="qr"></div>
+          <div class="countdown"><div id="countBar"></div></div>
+          <div class="muted" id="qrUrl" style="word-break:break-all;text-align:center"></div>
+          <div class="row">
+            <button id="fsBtn">Full screen</button>
+            <span class="count" id="presentCount">0</span><span class="muted">present</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="row" style="justify-content:space-between">
+            <h2>Attendance</h2>
+            <a id="csvLink"><button class="primary">Download spreadsheet (CSV)</button></a>
+          </div>
+          <div class="scroll">
+            <table><thead><tr><th>#</th><th>Student ID</th><th>Name</th><th>Time</th></tr></thead>
+              <tbody id="attBody"></tbody></table>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Quick poll</h2>
+          <div class="row" style="margin-bottom:8px">
+            <button data-tpl="Did you understand?|Yes|Mostly|Not yet">Understood?</button>
+            <button data-tpl="Answer:|A|B|C|D">A / B / C / D</button>
+            <button data-tpl="Pace of the lecture?|Too slow|Just right|Too fast">Pace</button>
+          </div>
+          <form id="pollForm">
+            <input id="pollQ" placeholder="Question" required>
+            <label for="pollOpts">Options (one per line, 2–6)</label>
+            <textarea id="pollOpts" style="min-height:80px"></textarea>
+            <button class="primary big">Launch poll</button>
+          </form>
+          <div id="pollMsg"></div>
+          <div id="pollLive"></div>
+        </div>
+
+        <div class="card">
+          <h2>Comments <span class="muted" id="commentCount"></span></h2>
+          <div class="scroll" id="comments"><p class="muted">No comments yet.</p></div>
+        </div>
+      </div>
+
+      <div class="grid" style="margin-top:16px">
+        <div class="card">
+          <h2>Lesson summary (AI)</h2>
+          <p class="muted">Upload the transcript Zoom / Meet saves with the recording (.vtt, .srt or .txt), or paste it.</p>
+          <input type="file" id="trFile" accept=".vtt,.srt,.txt,text/plain">
+          <textarea id="trText" placeholder="…or paste the transcript here" style="margin-top:8px"></textarea>
+          <button class="primary big" id="sumBtn">Summarise</button>
+          <div id="sumMsg"></div>
+          <pre class="out hidden" id="sumOut"></pre>
+        </div>
+
+        <div class="card">
+          <div class="row" style="justify-content:space-between">
+            <h2>Homework (AI review)</h2>
+            <button id="hwRefresh">Refresh</button>
+          </div>
+          <div id="hwOverview"><p class="muted">Students submit from their phones (Homework tab).</p></div>
+          <div id="hwMsg"></div>
+          <pre class="out hidden" id="hwOut"></pre>
+        </div>
+      </div>
+    </section>
+  </main>
+  <script src="/static/vendor/qrcode.min.js"></script>
+  <script src="/static/common.js"></script>
+  <script src="/static/lecturer.js"></script>
+</body>
+</html>

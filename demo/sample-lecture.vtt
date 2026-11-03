@@ -1,0 +1,31 @@
+WEBVTT
+
+00:00:01.000 --> 00:00:06.000
+<v Lecturer>Good morning everyone. Today we continue with object oriented design and focus on design patterns.
+
+00:00:06.000 --> 00:00:14.000
+<v Lecturer>A design pattern is a reusable solution to a common problem in software design. It is not code, it is a template.
+
+00:00:14.000 --> 00:00:24.000
+<v Lecturer>The first pattern is the strategy pattern. Strategy defines a family of algorithms, puts each one in its own class, and makes them interchangeable behind one interface.
+
+00:00:24.000 --> 00:00:34.000
+<v Lecturer>For example, our ClassPulse summary service can use an LLM summarizer or an extractive summarizer. Both implement the same Summarizer interface.
+
+00:00:34.000 --> 00:00:44.000
+<v Lecturer>The second pattern is the observer pattern. An observer subscribes to a subject and is notified whenever the subject changes state.
+
+00:00:44.000 --> 00:00:54.000
+<v Lecturer>Our event bus is an observer implementation. Every student phone subscribes to the session channel and receives poll and comment updates.
+
+00:00:54.000 --> 00:01:04.000
+<v Lecturer>The third pattern is the repository pattern. A repository hides the database behind methods like add session or list attendance, so services never write SQL.
+
+00:01:04.000 --> 00:01:14.000
+<v Lecturer>Remember the principle composition over inheritance. Prefer composing small objects over building deep inheritance hierarchies, because it reduces coupling.
+
+00:01:14.000 --> 00:01:24.000
+<v Lecturer>Finally, dependency injection. We pass dependencies such as the clock or the LLM client into the constructor, which makes every class easy to test with fakes.
+
+00:01:24.000 --> 00:01:30.000
+<v Lecturer>For homework, explain the strategy and observer patterns with an example from your own project.
