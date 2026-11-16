@@ -8,9 +8,16 @@ function h(tag, attrs = {}, ...children) {
     else if (k === "class") el.className = v;
     else if (v !== false && v != null) el.setAttribute(k, v);
   }
-  for (const c of children.flat()) if (c != null) el.append(c instanceof Node ? c : String(c));
+  for (const c of children.flat()) if (c != null && c !== false) el.append(c instanceof Node ? c : String(c));
   return el;
 }
+
+// Like replaceChildren, but skips null/undefined/false (used for optional parts).
+function put(el, ...kids) {
+  el.replaceChildren(...kids.flat().filter((k) => k != null && k !== false));
+}
+
+const show = (sel, on = true) => $(sel).classList.toggle("hidden", !on);
 
 async function api(method, path, body) {
   const res = await fetch(path, {
@@ -36,16 +43,38 @@ function store(key, value) {
   } catch { return null; }
 }
 
-// Like replaceChildren, but skips null/undefined (used for optional parts).
-function put(el, ...kids) {
-  el.replaceChildren(...kids.flat().filter((k) => k != null));
+// ---- language -------------------------------------------------------------
+const LANG = store("cp_lang") || ((navigator.language || "en").toLowerCase().startsWith("he") ? "he" : "en");
+
+function t(key, vars = {}) {
+  let s = I18N[LANG][key] ?? I18N.en[key] ?? key;
+  for (const [k, v] of Object.entries(vars)) s = s.replaceAll(`{${k}}`, v);
+  return s;
+}
+
+// Server errors carry a stable code; a failed fetch (no status) means the network is down.
+function errText(e) {
+  if (!e.status) return t("err.network");
+  return I18N[LANG]["err." + e.code] ? t("err." + e.code) : e.message;
+}
+
+function applyI18n() {
+  document.documentElement.lang = LANG;
+  document.documentElement.dir = LANG === "he" ? "rtl" : "ltr";
+  document.querySelectorAll("[data-i18n]").forEach((el) => (el.textContent = t(el.dataset.i18n)));
+  document.querySelectorAll("[data-i18n-ph]").forEach((el) => (el.placeholder = t(el.dataset.i18nPh)));
+  const btn = $("#langBtn");
+  if (btn) {
+    btn.textContent = LANG === "he" ? "English" : "עברית";
+    btn.onclick = () => { store("cp_lang", LANG === "he" ? "en" : "he"); location.reload(); };
+  }
 }
 
 function showMsg(el, text, kind = "ok") {
-  el.replaceChildren(text ? h("div", { class: `msg ${kind}` }, text) : "");
+  el.replaceChildren(text ? h("div", { class: `msg ${kind}`, role: "status" }, text) : "");
 }
 
-// Server-Sent Events with automatic reconnect (EventSource reconnects by itself).
+// Server-Sent Events. EventSource reconnects by itself when the network drops.
 function live(sessionId, handlers) {
   const es = new EventSource(`/api/sessions/${sessionId}/events`);
   for (const [name, fn] of Object.entries(handlers)) {
@@ -56,18 +85,16 @@ function live(sessionId, handlers) {
 
 function pollBars(poll, { onVote, myVote } = {}) {
   const total = poll.total_votes || 0;
+  const locked = !onVote || myVote != null || !poll.is_open;
   return poll.options.map((opt, i) => {
     const pct = total ? Math.round((poll.votes[i] / total) * 100) : 0;
-    const showResults = !onVote || myVote != null || !poll.is_open;
-    return h("button", {
-      class: "option", disabled: !onVote || myVote != null || !poll.is_open ? true : false,
-      onclick: () => onVote && onVote(i),
-    },
-      showResults ? h("div", { class: "fill", style: `width:${pct}%` }) : null,
-      h("span", {}, (myVote === i ? "✓ " : "") + opt),
-      showResults ? h("span", { class: "pct" }, `${pct}% (${poll.votes[i]})`) : null,
-    );
+    return h("button", { class: "option", disabled: locked, onclick: () => onVote && onVote(i) },
+      locked && h("div", { class: "fill", style: `width:${pct}%` }),
+      h("span", { dir: "auto" }, (myVote === i ? "✓ " : "") + opt),
+      locked && h("span", { class: "pct" }, `${pct}% (${poll.votes[i]})`));
   });
 }
 
-const fmtTime = (t) => new Date(t * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+const authorName = (c) => (c.author === "Anonymous" ? t("c.anon") : c.author);
+const fmtTime = (ts) => new Date(ts * 1000).toLocaleTimeString(LANG === "he" ? "he-IL" : "en-GB",
+  { hour: "2-digit", minute: "2-digit" });

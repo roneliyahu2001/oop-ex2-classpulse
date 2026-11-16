@@ -13,6 +13,8 @@ from dataclasses import dataclass
 from statistics import mean
 from typing import Callable
 
+from ..events import EventBus, staff_channel
+from ..i18n import tr
 from ..llm import LLMClient
 from ..models import DomainError, Submission
 from ..repository import Repository
@@ -58,7 +60,7 @@ class SimilarityAnalyzer:
         common = [w for w, c in term_df.most_common(40) if n and c / n >= 0.5]
         missing = [w for w in common if w not in t_terms][:8]
         unique = [w for w in t_terms if term_df[w] == 0] if others else []
-        unique.sort(key=lambda w: -target.text.lower().count(w))
+        unique.sort(key=lambda w: (-target.text.lower().count(w), w))
         lens = [len(o.text.split()) for o in others] or [len(target.text.split())]
         return Comparison(len(target.text.split()), mean(lens), best, best_id,
                           missing, unique[:8], n + 1)
@@ -73,32 +75,28 @@ class Reviewer(ABC):
     name: str
 
     @abstractmethod
-    def review(self, sub: Submission, cmp: Comparison, task: str) -> str: ...
+    def review(self, sub: Submission, cmp: Comparison, task: str, lang: str = "en") -> str: ...
 
 
 class HeuristicReviewer(Reviewer):
+    """Offline fallback: plain statistics, phrased as feedback."""
     name = "heuristic"
 
-    def review(self, sub: Submission, cmp: Comparison, task: str) -> str:
+    def review(self, sub: Submission, cmp: Comparison, task: str, lang: str = "en") -> str:
         out = []
-        ratio = cmp.words / cmp.class_avg_words if cmp.class_avg_words else 1
-        if ratio < 0.6:
-            out.append(f"- Your answer is short ({cmp.words} words vs. class average "
-                       f"{cmp.class_avg_words:.0f}). Consider expanding the explanation.")
-        elif ratio > 1.6:
-            out.append(f"- Your answer is long ({cmp.words} words vs. {cmp.class_avg_words:.0f}). "
-                       "Check that every paragraph is needed.")
+        if cmp.class_size == 1:
+            out.append(tr(lang, "rev_alone"))
         else:
-            out.append(f"- Length is in line with the class ({cmp.words} words).")
+            ratio = cmp.words / cmp.class_avg_words if cmp.class_avg_words else 1
+            key = "rev_short" if ratio < 0.6 else "rev_long" if ratio > 1.6 else "rev_ok"
+            out.append(tr(lang, key, words=cmp.words, avg=round(cmp.class_avg_words)))
         if cmp.missing_concepts:
-            out.append("- Most classmates discussed: " + ", ".join(cmp.missing_concepts)
-                       + ". Check whether these belong in your answer.")
+            out.append(tr(lang, "rev_missing", terms=", ".join(cmp.missing_concepts)))
         if cmp.unique_concepts:
-            out.append("- Ideas only you raised: " + ", ".join(cmp.unique_concepts[:5]) + ".")
+            out.append(tr(lang, "rev_unique", terms=", ".join(cmp.unique_concepts[:5])))
         if cmp.max_similarity >= COPY_THRESHOLD:
-            out.append(f"- Warning: {cmp.max_similarity:.0%} overlap with another submission.")
-        out.append("(Offline review. Set ANTHROPIC_API_KEY for an in-depth LLM review.)")
-        return "\n".join(out)
+            out.append(tr(lang, "rev_overlap", pct=round(cmp.max_similarity * 100)))
+        return "\n".join(f"- {line}" for line in out) + "\n" + tr(lang, "rev_offline")
 
 
 class LLMReviewer(Reviewer):
@@ -109,7 +107,7 @@ class LLMReviewer(Reviewer):
     def __init__(self, client: LLMClient):
         self._client = client
 
-    def review(self, sub: Submission, cmp: Comparison, task: str) -> str:
+    def review(self, sub: Submission, cmp: Comparison, task: str, lang: str = "en") -> str:
         prompt = (f"Assignment: {task or '(not given)'}\n\n"
                   f"Student submission:\n<submission>\n{sub.text}\n</submission>\n\n"
                   f"Comparison with {cmp.class_size - 1} classmates (anonymous): "
@@ -124,7 +122,9 @@ class LLMReviewer(Reviewer):
 
 class ReviewService:
     def __init__(self, repo: Repository, sessions: SessionService, primary: Reviewer | None,
-                 fallback: Reviewer | None = None, clock: Callable[[], float] = time.time):
+                 fallback: Reviewer | None = None, clock: Callable[[], float] = time.time,
+                 bus: EventBus | None = None):
+        self._bus = bus
         self._repo = repo
         self._sessions = sessions
         self._primary = primary
@@ -132,38 +132,55 @@ class ReviewService:
         self._analyzer = SimilarityAnalyzer()
         self._clock = clock
 
-    def submit(self, session_id: str, student_id: str, name: str, text: str) -> Submission:
+    def submit(self, session_id: str, student_id: str, name: str, text: str,
+               device_id: str = "") -> Submission:
         self._sessions.get(session_id)
-        text = text.strip()
+        text, student_id = text.strip(), student_id.strip()
         if len(text.split()) < 10:
             raise DomainError("SUBMISSION_TOO_SHORT", "Submission needs at least 10 words")
-        if not student_id.strip():
+        if not student_id:
             raise DomainError("STUDENT_ID_REQUIRED", "Student ID is required")
-        return self._repo.upsert_submission(session_id, student_id.strip(), name.strip() or "?",
-                                            text[:MAX_SUBMISSION], self._clock())
+        existing = self._repo.get_submission(session_id, student_id)
+        if existing and existing.device_id and existing.device_id != device_id:
+            raise DomainError("SUBMISSION_LOCKED",
+                              "This student ID already submitted from another phone", 409)
+        sub = self._repo.upsert_submission(session_id, student_id, name.strip() or "?",
+                                           text[:MAX_SUBMISSION], self._clock(), device_id)
+        if self._bus:  # the dashboard's list refreshes by itself
+            self._bus.publish(staff_channel(session_id), "homework", {"student_id": student_id})
+        return sub
 
-    def _write(self, sub: Submission, cmp: Comparison, task: str) -> tuple[str, str]:
+    def delete(self, session_id: str, student_id: str) -> None:
+        """Lecturer only, e.g. when someone submitted under another student's ID."""
+        if not self._repo.delete_submission(session_id, student_id):
+            raise DomainError("NO_SUBMISSION", "No such submission", 404)
+
+    def _write(self, sub: Submission, cmp: Comparison, task: str, lang: str) -> tuple[str, str]:
         if self._primary is not None:
             try:
-                return self._primary.name, self._primary.review(sub, cmp, task)
+                return self._primary.name, self._primary.review(sub, cmp, task, lang)
             except Exception:
-                pass
-        return self._fallback.name, self._fallback.review(sub, cmp, task)
+                pass  # network down, quota, etc. -> offline review
+        return self._fallback.name, self._fallback.review(sub, cmp, task, lang)
 
     def review_student(self, session_id: str, student_id: str, task: str = "",
-                       lecturer: bool = False) -> dict:
+                       lecturer: bool = False, device_id: str = "", lang: str = "en") -> dict:
+        session = self._sessions.get(session_id)
         subs = self._repo.list_submissions(session_id)
         mine = next((s for s in subs if s.student_id == student_id), None)
         if mine is None:
             raise DomainError("NO_SUBMISSION", "Submit your homework first", 404)
+        if not lecturer and mine.device_id and mine.device_id != device_id:
+            raise DomainError("NOT_YOUR_SUBMISSION", "You can only review your own homework", 403)
         others = [s for s in subs if s.student_id != student_id]
         cmp = self._analyzer.compare(mine, others)
-        method, text = self._write(mine, cmp, task)
+        method, text = self._write(mine, cmp, task.strip() or session.homework_task, lang)
         return {"student_id": student_id, "method": method, "review": text,
                 "comparison": cmp.to_dict(include_identities=lecturer)}
 
     def class_overview(self, session_id: str) -> dict:
         """Lecturer view: who submitted, pairwise similarity, suspicious pairs."""
+        self._sessions.get(session_id)
         subs = self._repo.list_submissions(session_id)
         m = self._analyzer.matrix(subs)
         flagged = [{"a": subs[i].student_id, "b": subs[j].student_id, "similarity": m[i][j]}

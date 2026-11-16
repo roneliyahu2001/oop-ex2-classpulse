@@ -62,3 +62,18 @@ def jaccard(a: set, b: set) -> float:
     if not a and not b:
         return 0.0
     return len(a & b) / len(a | b)
+
+
+def split_chunks(text: str, size: int) -> list[str]:
+    """Cuts a long text into pieces of at most `size` characters, at word boundaries."""
+    chunks, start = [], 0
+    while len(text) - start > size:
+        cut = text.rfind(" ", start, start + size)
+        if cut <= start:
+            cut = start + size
+        chunks.append(text[start:cut].strip())
+        start = cut
+    rest = text[start:].strip()
+    if rest:
+        chunks.append(rest)
+    return chunks

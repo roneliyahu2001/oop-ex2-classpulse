@@ -29,18 +29,21 @@ def main() -> None:
     p.add_argument("--pin", default=os.environ.get("LECTURER_PIN") or f"{secrets.randbelow(10**4):04d}")
     p.add_argument("--public-url", default=os.environ.get("PUBLIC_URL"))
     p.add_argument("--db", default=os.environ.get("CLASSPULSE_DB", "classpulse.db"))
+    p.add_argument("--late-after", type=int, default=15, metavar="MINUTES",
+                   help="a check-in later than this many minutes after the start is marked late")
     a = p.parse_args()
 
     public = (a.public_url or f"http://{lan_ip()}:{a.port}").rstrip("/")
     secret_hex = os.environ.get("CLASSPULSE_SECRET")
     app = ClassPulseApp(Config(db_path=a.db, lecturer_pin=a.pin, public_url=public,
+                               late_after_minutes=a.late_after,
                                secret=bytes.fromhex(secret_hex) if secret_hex else b""),
                         llm=build_llm_client())
     srv = make_server(app, port=a.port)
     print(f"""
   ClassPulse is running
-  Lecturer dashboard : {public}/lecturer   (PIN: {a.pin})
-  Students           : scan the QR shown on the dashboard
+  Lecturer dashboard : http://localhost:{a.port}/lecturer   (PIN: {a.pin})
+  Students reach it  : {public}   (they scan the QR shown on the dashboard)
   LLM features       : {"Claude API" if app.llm_enabled else "offline mode (set ANTHROPIC_API_KEY to enable)"}
   Stop with Ctrl+C
 """)

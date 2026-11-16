@@ -25,6 +25,12 @@ class CommentService:
         self._bus = bus
         self._clock = clock
 
+    def _get(self, comment_id: int) -> Comment:
+        c = self._repo.get_comment(comment_id)
+        if c is None:
+            raise DomainError("COMMENT_NOT_FOUND", "No such comment", 404)
+        return c
+
     def post(self, session_id: str, text: str, author: str = "") -> Comment:
         self._sessions.get(session_id)
         text = text.strip()
@@ -37,15 +43,25 @@ class CommentService:
         return c
 
     def upvote(self, comment_id: int, device_id: str) -> Comment:
-        c = self._repo.get_comment(comment_id)
-        if c is None:
+        if self._get(comment_id).hidden:
             raise DomainError("COMMENT_NOT_FOUND", "No such comment", 404)
         if not self._repo.add_upvote(comment_id, device_id):
             raise DomainError("ALREADY_UPVOTED", "You already upvoted this", 409)
-        c = self._repo.get_comment(comment_id)
+        c = self._get(comment_id)
         self._bus.publish(c.session_id, "comment", c.to_dict())
         return c
 
-    def list(self, session_id: str) -> list[Comment]:
+    def moderate(self, comment_id: int, answered: bool | None = None,
+                 hidden: bool | None = None) -> Comment:
+        """Lecturer only: mark a question as answered, or hide an unsuitable comment."""
+        c = self._get(comment_id)
+        self._repo.set_comment_flags(comment_id,
+                                     c.answered if answered is None else answered,
+                                     c.hidden if hidden is None else hidden)
+        c = self._get(comment_id)
+        self._bus.publish(c.session_id, "comment", c.to_dict())
+        return c
+
+    def list(self, session_id: str, include_hidden: bool = False) -> list[Comment]:
         self._sessions.get(session_id)
-        return self._repo.list_comments(session_id)
+        return [c for c in self._repo.list_comments(session_id) if include_hidden or not c.hidden]

@@ -3,71 +3,91 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#2f6fed">
   <title>ClassPulse</title>
+  <link rel="icon" href="/static/icon.svg">
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
   <header>
-    <div><h1>ClassPulse</h1><div class="sub" id="sessionTitle">Student</div></div>
-    <span class="muted" id="netStatus"></span>
+    <div><h1>ClassPulse</h1><div class="sub" id="sessionTitle" data-i18n="s.sub">Student</div></div>
+    <div class="row">
+      <span class="muted" id="netStatus"></span>
+      <button id="langBtn" class="small"></button>
+    </div>
   </header>
-  <main style="max-width:560px">
-    <div id="banner"></div>
+  <main class="narrow">
+    <div id="banner" aria-live="polite"></div>
 
     <section class="card hidden" id="noSession">
-      <h2>Welcome</h2>
-      <p>Scan the QR code on the lecturer's screen with your phone camera to check in.</p>
+      <h2 data-i18n="s.welcome.h">Welcome</h2>
+      <p data-i18n="s.welcome.p"></p>
     </section>
 
     <section class="card hidden" id="checkinCard">
-      <h2>Check in</h2>
+      <h2 data-i18n="s.checkin.h">Check in</h2>
       <form id="checkinForm">
-        <label for="sid">Student ID</label>
-        <input id="sid" inputmode="numeric" autocomplete="off" required pattern="\d{5,10}">
-        <label for="sname">Full name</label>
-        <input id="sname" autocomplete="name" required>
-        <button class="primary big" type="submit">I'm here</button>
+        <label for="sid" data-i18n="s.id">Student ID</label>
+        <input id="sid" inputmode="numeric" autocomplete="off" required pattern="\d{5,10}" dir="ltr">
+        <label for="sname" data-i18n="s.name">Full name</label>
+        <input id="sname" autocomplete="name" required maxlength="80">
+        <div id="codeRow" class="hidden">
+          <label for="code" data-i18n="s.code">Code</label>
+          <input id="code" class="code-input" inputmode="numeric" autocomplete="one-time-code" maxlength="7" dir="ltr" placeholder="000 000">
+        </div>
+        <button class="primary big" type="submit" id="checkinBtn" data-i18n="s.here">I'm here</button>
       </form>
-      <p class="muted">Saved on this phone, so next time scanning is enough.</p>
-      <div id="checkinMsg"></div>
+      <p class="muted" data-i18n="s.saved"></p>
+      <div id="checkinMsg" aria-live="polite"></div>
     </section>
 
     <section id="classView" class="hidden">
-      <div class="tabs">
-        <button data-tab="poll" class="active">Poll</button>
-        <button data-tab="comments">Comments</button>
-        <button data-tab="homework">Homework</button>
+      <div class="tabs" role="tablist">
+        <button data-tab="poll" class="active" data-i18n="s.tab.poll">Poll</button>
+        <button data-tab="comments" data-i18n="s.tab.comments">Questions</button>
+        <button data-tab="homework" data-i18n="s.tab.homework">Homework</button>
+        <button data-tab="summary" id="summaryTab" class="hidden" data-i18n="s.tab.summary">Summary</button>
       </div>
 
       <div class="card" data-pane="poll">
-        <h2 id="pollQuestion">No active poll</h2>
-        <div id="pollOptions"><p class="muted">When the lecturer opens a poll, it appears here.</p></div>
+        <h2 id="pollQuestion"></h2>
+        <div id="pollOptions"></div>
       </div>
 
       <div class="card hidden" data-pane="comments">
-        <h2>Questions & suggestions</h2>
+        <h2 data-i18n="s.c.h">Questions and suggestions</h2>
         <form id="commentForm">
-          <textarea id="commentText" maxlength="500" placeholder="Ask a question or suggest something…" required></textarea>
-          <label class="row" style="color:var(--text)"><input type="checkbox" id="anon" style="width:auto" checked> Post anonymously</label>
-          <button class="primary big" type="submit">Send</button>
+          <textarea dir="auto" id="commentText" maxlength="500" data-i18n-ph="s.c.ph" required></textarea>
+          <label class="check"><input type="checkbox" id="anon" checked> <span data-i18n="s.c.anon">Post anonymously</span></label>
+          <button class="primary big" type="submit" data-i18n="s.c.send">Send</button>
         </form>
-        <div id="commentMsg"></div>
+        <div id="commentMsg" aria-live="polite"></div>
         <div id="comments"></div>
       </div>
 
       <div class="card hidden" data-pane="homework">
-        <h2>Homework review</h2>
-        <p class="muted">Paste your answer. You get feedback and an anonymous comparison with the class.</p>
-        <label for="hwTask">Assignment question (optional)</label>
-        <input id="hwTask">
-        <label for="hwText">Your answer</label>
-        <textarea id="hwText" style="min-height:160px"></textarea>
-        <button class="primary big" id="hwSubmit">Submit & review</button>
-        <div id="hwMsg"></div>
+        <h2 data-i18n="s.hw.h">Homework review</h2>
+        <p class="muted" data-i18n="s.hw.p"></p>
+        <div id="hwTaskBox" class="hidden">
+          <label data-i18n="s.hw.task">The assignment</label>
+          <div class="quote" dir="auto" id="hwTask"></div>
+        </div>
+        <label for="hwFile" data-i18n="s.hw.file">Load from a file</label>
+        <input type="file" id="hwFile" accept=".txt,.md,.py,.java,.js,.c,.cpp,.cs,.html,.css,.json,text/*">
+        <label for="hwText" data-i18n="s.hw.answer">Your answer</label>
+        <textarea dir="auto" id="hwText" class="tall"></textarea>
+        <button class="primary big" id="hwSubmit" data-i18n="s.hw.submit">Submit and review</button>
+        <div id="hwMsg" aria-live="polite"></div>
         <div id="hwResult"></div>
+      </div>
+
+      <div class="card hidden" data-pane="summary">
+        <h2 data-i18n="s.sum.h">Lesson summary</h2>
+        <pre dir="auto" class="out" id="summaryText"></pre>
       </div>
     </section>
   </main>
+  <script src="/static/i18n.js"></script>
   <script src="/static/common.js"></script>
   <script src="/static/student.js"></script>
 </body>

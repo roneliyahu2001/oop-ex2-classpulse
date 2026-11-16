@@ -6,7 +6,9 @@
 **1.3 Definitions.**
 - **Session**: one class meeting.
 - **Check-in**: a student marking attendance.
-- **Token**: the rotating code embedded in the QR.
+- **Token / code**: the rotating secret on the lecturer's screen. The token is inside the QR link; the code is 6 digits a student can type.
+- **Device**: one phone browser, recognised by a random cookie.
+- **Geofence**: a circle around the classroom used by the optional location check.
 - **SSE**: Server-Sent Events.
 - **LLM**: a large language model (Claude).
 
@@ -22,10 +24,10 @@
 **2.3 Operating environment.** The server needs Python 3.10 or newer on macOS, Windows or Linux. Clients are any modern mobile or desktop browser.
 
 **2.4 Constraints**
-- No Moodle, Zoom or Google Classroom integration.
-- No personal data beyond student ID and name.
+- No integration with Moodle, Zoom, Google Classroom or the university's student-information system ("מידע אישי").
 - Video is summarised from its exported transcript. Raw audio is not processed.
 - The app must run with no package installs.
+- Browsers share a phone's location only with HTTPS pages, so the location check needs an HTTPS address.
 
 **2.5 Assumptions.** Phones can reach the laptop over the network. The lecturer can project the dashboard.
 
@@ -38,6 +40,8 @@
 | FR-S2 | The lecturer starts a session with a title. The session gets a short unique ID. | Must |
 | FR-S3 | The lecturer ends a session. After that, check-in and new polls are rejected. | Must |
 | FR-S4 | The lecturer can reopen the data (attendance, polls, comments) of past sessions. | Should |
+| FR-S5 | A student who opens the address without scanning is taken to the session that is open now. | Should |
+| FR-S6 | Every screen is available in Hebrew (right-to-left) and English. The choice is remembered per browser. | Should |
 
 ### 3.2 Attendance (main feature)
 | ID | Requirement | Priority |
@@ -49,6 +53,13 @@
 | FR-A5 | A phone (device cookie) checks in at most one student per session, which prevents checking in a friend. | Must |
 | FR-A6 | The lecturer sees a live attendance table and a count, updated in under 2 s. | Must |
 | FR-A7 | The lecturer downloads attendance as CSV (UTF-8 with BOM, opens in Excel or Sheets). | Must |
+| FR-A8 | The dashboard also shows a 6-digit code that rotates with the QR. A student whose camera fails types it instead of scanning. | Must |
+| FR-A9 | A check-in more than N minutes after the session start (default 15) is marked "late". | Should |
+| FR-A10 | The lecturer adds a student by hand (dead phone) and removes a wrong record, also after the session ended. | Should |
+| FR-A11 | **Location check (optional per session).** The lecturer sets a circle around the laptop's position (radius 30–5000 m). Mode "mark": everyone checks in, and students who are far or sent no location are flagged. Mode "block": such students are rejected. The server stores only the distance, never coordinates. | Should |
+| FR-A12 | The lecturer's table hints when two check-ins came from the same network address (possibly one phone used twice). | Could |
+| FR-A13 | The lecturer downloads an Excel workbook per session with three sheets: attendance, polls, comments. | Must |
+| FR-A14 | The lecturer sees and downloads a course report: students × sessions, with a count and percentage per student. | Should |
 
 ### 3.3 Comments
 | ID | Requirement | Priority |
@@ -58,6 +69,8 @@
 | FR-C3 | Comments are accepted after the session ends (offline feedback). | Must |
 | FR-C4 | A comment written while the phone is offline is queued and sent automatically when the phone reconnects. | Should |
 | FR-C5 | Students upvote comments, once per phone. The dashboard sorts comments by upvotes. | Should |
+| FR-C6 | The lecturer marks a comment as answered, or hides it. A hidden comment disappears from all phones at once. | Should |
+| FR-C7 | A phone can post at most 5 comments in 30 seconds. | Should |
 
 ### 3.4 Polls
 | ID | Requirement | Priority |
@@ -73,35 +86,49 @@
 | FR-M1 | The lecturer uploads or pastes a transcript (.vtt, .srt or .txt). | Must |
 | FR-M2 | The system removes timestamps and tags, and summarises with the LLM: overview, topics, definitions and review questions. | Must |
 | FR-M3 | If the LLM is unavailable, an extractive summary is returned with a note saying so. | Must |
+| FR-M4 | A transcript longer than one LLM request is summarised part by part and then combined. | Should |
+| FR-M5 | The summary is saved with the session as a draft. The lecturer can edit it and share it; shared summaries appear on the students' phones. | Should |
 
 ### 3.6 Homework review (LLM)
 | ID | Requirement | Priority |
 |---|---|---|
-| FR-H1 | A student submits a homework text (at least 10 words). Resubmitting replaces the previous text. | Must |
+| FR-H1 | A student submits a homework text (at least 10 words), typed, pasted or loaded from a text file. Resubmitting from the same phone replaces the previous text. | Must |
 | FR-H2 | The system compares the submission with classmates' submissions: length versus the average, concepts the class covered that are missing, unique concepts, and the maximum 3-gram overlap. | Must |
 | FR-H3 | The LLM writes the review (strengths, weaknesses, improvements, suggested grade). There is a heuristic fallback. | Must |
 | FR-H4 | Students see classmates only as anonymous statistics. The lecturer sees identities and the pairs flagged for overlap of 50% or more. | Must |
+| FR-H5 | Only the phone that submitted (or the lecturer) can replace a submission or read its review. | Must |
+| FR-H6 | The lecturer sets the assignment question once per session; students see it and the LLM receives it. The lecturer can delete a submission. | Should |
 
 ## 4. Non-functional requirements
 | ID | Category | Requirement |
 |---|---|---|
 | NFR-1 | Usability (KISS) | Check-in takes 2 taps or fewer after the first time. There is no install and no student account. |
-| NFR-2 | Performance | Supports 100 concurrent phones on one laptop. Live updates arrive in under 2 s. |
+| NFR-2 | Performance | Supports 100 concurrent phones on one laptop. Live updates arrive in under 2 s. Measured: 200 simulated phones, slowest live update 20 ms (tools report, 1.4). |
 | NFR-3 | Availability | All non-AI features work with no internet, given a local network. |
-| NFR-4 | Security | Lecturer endpoints require the PIN cookie. Tokens are HMAC-signed. Responses never include device IDs. Static file serving blocks path traversal. |
-| NFR-5 | Privacy | Only the student ID and name are stored. Data stays in a local SQLite file. |
+| NFR-4 | Security | Lecturer endpoints require the PIN cookie. PIN guesses are limited to 5 per minute per address, check-in attempts to 10 per minute per phone. Tokens are HMAC-signed. Static file serving blocks path traversal. Pages carry a Content-Security-Policy. Exported cells cannot run as spreadsheet formulas. |
+| NFR-5 | Privacy | Only the student ID and name are stored, in a local SQLite file. Names and IDs are pushed only to the lecturer's dashboard, never to other phones. Responses never include device IDs, network addresses or the classroom coordinates. |
 | NFR-6 | Portability | Uses only the Python standard library and runs on macOS, Windows and Linux. |
-| NFR-7 | Maintainability | Layered design (web → services → repository). Dependencies are injected so every service has unit tests. |
-| NFR-8 | Localisation | Hebrew names work end to end (UI, database, CSV). |
+| NFR-7 | Maintainability | Layered design (web → services → repository). Dependencies are injected so every service has unit tests. A database file from an older version is upgraded on start. |
+| NFR-8 | Localisation | Hebrew works end to end: screens (right-to-left), names in the database, CSV and Excel (right-to-left sheets), and the offline AI texts. |
 
 ## 5. Traceability (requirement → class → test)
 | Requirement | Class | Test |
 |---|---|---|
-| FR-A2 | `TokenRotator` | `TokenRotatorTest` |
+| FR-A2, FR-A8 | `TokenRotator` | `TokenRotatorTest` |
 | FR-A4, FR-A5 | `AttendanceService.check_in` | `test_rescan_same_device_is_idempotent`, `test_one_device_cannot_check_in_two_students` |
-| FR-A7 | `AttendanceService.export_csv` | `test_csv_export_has_bom_and_hebrew` |
+| FR-A7 | `AttendanceService.export_csv` | `test_csv_export_has_bom_and_hebrew`, `test_csv_cannot_smuggle_a_formula` |
+| FR-A9 | `AttendanceService.check_in` | `test_late_after_fifteen_minutes` |
+| FR-A10 | `AttendanceService.add_manual`, `remove` | `test_lecturer_adds_and_removes_by_hand` |
+| FR-A11 | `GeoFence`, `AttendanceService._locate`, `SessionService.set_geofence` | `GeoTest`, `test_block_mode`, `test_flag_mode_lets_everyone_in_and_marks_them`, `test_location_check_over_http` |
+| FR-A12 | `AttendanceService.list_for_lecturer` | `test_two_checkins_from_one_address_are_flagged` |
+| FR-A13, FR-A14 | `ReportService`, `Workbook` | `ReportServiceTest`, `WorkbookTest` |
 | FR-C3 | `CommentService.post` | `test_offline_comment_after_class_end_allowed` |
+| FR-C6, FR-C7 | `CommentService.moderate`, `RateLimiter` | `test_lecturer_marks_answered_and_hides`, `test_comment_flood_is_slowed_down` |
 | FR-P2, FR-P3 | `PollService` | `test_new_poll_closes_previous`, `test_one_vote_per_device` |
-| FR-M3 | `SummaryService` | `test_falls_back_when_llm_fails` |
-| FR-H4 | `ReviewService`, `Comparison.to_dict` | `test_student_view_hides_identities` |
-| NFR-4 | `Handler` | `test_lecturer_endpoints_protected`, `test_pages_served` |
+| FR-M3, FR-M4 | `SummaryService`, `LLMSummarizer` | `test_falls_back_when_llm_fails`, `test_long_lecture_is_summarised_in_parts_then_combined` |
+| FR-M5 | `SessionService.save_summary` | `test_summary_is_a_draft_until_published`, `test_summary_is_saved_as_a_draft_then_shared` |
+| FR-H4, FR-H5 | `ReviewService`, `Comparison.to_dict` | `test_student_view_hides_identities`, `test_a_student_cannot_read_someone_elses_review`, `test_nobody_else_can_overwrite_a_submission` |
+| NFR-2 | whole system | `test_simulated_class_of_phones`, `tools/simulate_class.py` |
+| NFR-4 | `Handler`, `RateLimiter` | `test_lecturer_endpoints_protected`, `test_pin_cannot_be_guessed_by_brute_force`, `test_pages_served` |
+| NFR-5 | `EventBus` (staff channel) | `test_names_travel_only_on_the_staff_channel`, `test_live_stream_keeps_names_away_from_students` |
+| NFR-7 | `Repository._migrate` | `test_database_file_from_version_1_keeps_working` |

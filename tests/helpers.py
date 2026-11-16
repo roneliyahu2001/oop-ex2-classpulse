@@ -1,5 +1,10 @@
 from classpulse.app import ClassPulseApp, Config
 
+# A point on a campus, and two phones: one about 55 m away, one about 11 km away.
+CLASSROOM = (32.1133, 34.8044)
+NEAR = (32.1138, 34.8044)
+FAR = (32.2133, 34.8044)
+
 
 class FakeClock:
     """Controllable time source so token expiry can be tested without sleeping."""
@@ -14,10 +19,21 @@ class FakeClock:
         self.t += seconds
 
 
-def make_app(clock=None, llm=None) -> ClassPulseApp:
-    return ClassPulseApp(Config(db_path=":memory:", lecturer_pin="1234",
-                                public_url="http://test", secret=b"k" * 32),
-                         llm=llm, clock=clock or FakeClock())
+_apps: list[ClassPulseApp] = []
+
+
+def make_app(clock=None, llm=None, db: str = ":memory:") -> ClassPulseApp:
+    app = ClassPulseApp(Config(db_path=db, lecturer_pin="1234", public_url="http://test",
+                               secret=b"k" * 32),
+                        llm=llm, clock=clock or FakeClock())
+    _apps.append(app)
+    return app
+
+
+def close_apps() -> None:
+    """Closes the databases of all apps made so far (call from tearDownModule)."""
+    while _apps:
+        _apps.pop().repo.close()
 
 
 HOMEWORK_A = ("Encapsulation hides the internal state of an object and exposes behaviour through methods. "

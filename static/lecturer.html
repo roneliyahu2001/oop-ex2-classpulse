@@ -4,106 +4,152 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>ClassPulse Lecturer</title>
+  <link rel="icon" href="/static/icon.svg">
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
   <header>
-    <div><h1>ClassPulse · Lecturer</h1><div class="sub" id="headerSub">Dashboard</div></div>
+    <div><h1 data-i18n="l.title">ClassPulse · Lecturer</h1><div class="sub" id="headerSub"></div></div>
     <div class="row">
-      <select id="sessionPicker" style="width:auto"></select>
-      <button class="danger hidden" id="endBtn">End class</button>
+      <select id="sessionPicker" class="hidden auto"></select>
+      <button class="danger hidden" id="endBtn" data-i18n="l.end">End class</button>
+      <button id="langBtn" class="small"></button>
     </div>
   </header>
   <main>
-    <section class="card hidden" id="loginCard" style="max-width:380px;margin:40px auto">
-      <h2>Lecturer login</h2>
+    <section class="card hidden login" id="loginCard">
+      <h2 data-i18n="l.login.h">Lecturer login</h2>
       <form id="loginForm">
-        <label for="pin">PIN (printed in the server console)</label>
-        <input id="pin" type="password" inputmode="numeric" autofocus>
-        <button class="primary big">Log in</button>
+        <label for="pin" data-i18n="l.login.pin">PIN</label>
+        <input id="pin" type="password" inputmode="numeric" autocomplete="off" autofocus dir="ltr">
+        <button class="primary big" data-i18n="l.login.btn">Log in</button>
       </form>
-      <div id="loginMsg"></div>
+      <div id="loginMsg" aria-live="polite"></div>
     </section>
 
-    <section class="card hidden" id="startCard" style="max-width:520px">
-      <h2>Start a class</h2>
-      <form id="startForm" class="row">
-        <input id="title" placeholder="e.g. OOP – Lecture 5: Design patterns" required>
-        <button class="primary">Start</button>
-      </form>
+    <section id="home" class="hidden">
+      <div class="card">
+        <h2 data-i18n="l.start.h">Start a class</h2>
+        <form id="startForm" class="row">
+          <input id="title" dir="auto" data-i18n-ph="l.start.ph" required maxlength="120">
+          <button class="primary" data-i18n="l.start.btn">Start</button>
+        </form>
+        <div id="startMsg" aria-live="polite"></div>
+      </div>
+      <div class="card">
+        <div class="row between">
+          <h2 data-i18n="l.course.h">All classes</h2>
+          <a id="courseXlsx" class="button primary" data-i18n="l.course.xlsx">Download Excel</a>
+        </div>
+        <div class="scroll wide" id="course"></div>
+      </div>
     </section>
 
     <section id="dash" class="hidden">
       <div class="grid">
         <div class="card qr-box" id="qrCard">
-          <h2 style="align-self:flex-start">Scan to check in</h2>
+          <h2 data-i18n="l.qr.h">Scan to check in</h2>
           <div id="qr"></div>
           <div class="countdown"><div id="countBar"></div></div>
-          <div class="muted" id="qrUrl" style="word-break:break-all;text-align:center"></div>
+          <div class="nocam">
+            <span id="noCamText"></span>
+            <span class="code" id="qrCode" dir="ltr"></span>
+          </div>
           <div class="row">
-            <button id="fsBtn">Full screen</button>
-            <span class="count" id="presentCount">0</span><span class="muted">present</span>
+            <button id="fsBtn" data-i18n="l.qr.full">Full screen</button>
+            <span class="count" id="presentCount">0</span><span class="muted" data-i18n="l.qr.present">present</span>
+          </div>
+          <div class="geo">
+            <div class="row">
+              <label for="geoMode" data-i18n="l.geo.label">Location check</label>
+              <select id="geoMode" class="auto">
+                <option value="off" data-i18n="l.geo.off">Off</option>
+                <option value="flag" data-i18n="l.geo.flag">Mark far</option>
+                <option value="block" data-i18n="l.geo.block">Block far</option>
+              </select>
+              <label for="geoRadius" data-i18n="l.geo.radius">Radius (m)</label>
+              <input id="geoRadius" type="number" min="30" max="5000" step="10" value="150" class="num" dir="ltr">
+            </div>
+            <div id="geoMsg" aria-live="polite"></div>
           </div>
         </div>
 
         <div class="card">
-          <div class="row" style="justify-content:space-between">
-            <h2>Attendance</h2>
-            <a id="csvLink"><button class="primary">Download spreadsheet (CSV)</button></a>
+          <div class="row between">
+            <h2 data-i18n="l.att.h">Attendance</h2>
+            <span class="row">
+              <a id="xlsxLink" class="button primary" data-i18n="l.att.xlsx">Excel</a>
+              <a id="csvLink" class="button" data-i18n="l.att.csv">CSV</a>
+            </span>
           </div>
           <div class="scroll">
-            <table><thead><tr><th>#</th><th>Student ID</th><th>Name</th><th>Time</th></tr></thead>
-              <tbody id="attBody"></tbody></table>
+            <table>
+              <thead><tr><th>#</th><th data-i18n="l.att.id">Student ID</th><th data-i18n="l.att.name">Name</th><th data-i18n="l.att.time">Time</th><th></th></tr></thead>
+              <tbody id="attBody"></tbody>
+            </table>
           </div>
+          <form id="addForm" class="row add">
+            <input id="addId" inputmode="numeric" data-i18n-ph="l.att.id" required pattern="\d{5,10}" dir="ltr" aria-label="Student ID">
+            <input id="addName" data-i18n-ph="l.att.name" required maxlength="80" aria-label="Name">
+            <button data-i18n="l.att.addBtn">Add</button>
+          </form>
+          <div class="muted" data-i18n="l.att.add"></div>
+          <div id="attMsg" aria-live="polite"></div>
         </div>
 
         <div class="card">
-          <h2>Quick poll</h2>
-          <div class="row" style="margin-bottom:8px">
-            <button data-tpl="Did you understand?|Yes|Mostly|Not yet">Understood?</button>
-            <button data-tpl="Answer:|A|B|C|D">A / B / C / D</button>
-            <button data-tpl="Pace of the lecture?|Too slow|Just right|Too fast">Pace</button>
+          <h2 data-i18n="l.poll.h">Quick poll</h2>
+          <div class="row templates">
+            <button data-tpl="l.poll.t1" data-i18n="l.poll.t1"></button>
+            <button data-tpl="l.poll.t2" data-i18n="l.poll.t2"></button>
+            <button data-tpl="l.poll.t3" data-i18n="l.poll.t3"></button>
           </div>
           <form id="pollForm">
-            <input id="pollQ" placeholder="Question" required>
-            <label for="pollOpts">Options (one per line, 2–6)</label>
-            <textarea id="pollOpts" style="min-height:80px"></textarea>
-            <button class="primary big">Launch poll</button>
+            <input id="pollQ" dir="auto" data-i18n-ph="l.poll.q" required maxlength="200">
+            <label for="pollOpts" data-i18n="l.poll.opts">Options</label>
+            <textarea dir="auto" id="pollOpts"></textarea>
+            <button class="primary big" data-i18n="l.poll.launch">Launch poll</button>
           </form>
-          <div id="pollMsg"></div>
+          <div id="pollMsg" aria-live="polite"></div>
           <div id="pollLive"></div>
         </div>
 
         <div class="card">
-          <h2>Comments <span class="muted" id="commentCount"></span></h2>
-          <div class="scroll" id="comments"><p class="muted">No comments yet.</p></div>
+          <h2><span data-i18n="l.c.h">Questions</span> <span class="muted" id="commentCount"></span></h2>
+          <div class="scroll" id="comments"></div>
         </div>
-      </div>
 
-      <div class="grid" style="margin-top:16px">
         <div class="card">
-          <h2>Lesson summary (AI)</h2>
-          <p class="muted">Upload the transcript Zoom / Meet saves with the recording (.vtt, .srt or .txt), or paste it.</p>
+          <h2 data-i18n="l.sum.h">Lesson summary (AI)</h2>
+          <p class="muted" data-i18n="l.sum.p"></p>
           <input type="file" id="trFile" accept=".vtt,.srt,.txt,text/plain">
-          <textarea id="trText" placeholder="…or paste the transcript here" style="margin-top:8px"></textarea>
-          <button class="primary big" id="sumBtn">Summarise</button>
-          <div id="sumMsg"></div>
-          <pre class="out hidden" id="sumOut"></pre>
+          <textarea dir="auto" id="trText" data-i18n-ph="l.sum.ph"></textarea>
+          <button class="primary big" id="sumBtn" data-i18n="l.sum.btn">Summarise</button>
+          <div id="sumMsg" aria-live="polite"></div>
+          <div id="sumBox" class="hidden">
+            <textarea dir="auto" id="sumOut" class="tall"></textarea>
+            <button id="shareBtn"></button>
+          </div>
         </div>
 
         <div class="card">
-          <div class="row" style="justify-content:space-between">
-            <h2>Homework (AI review)</h2>
-            <button id="hwRefresh">Refresh</button>
+          <div class="row between">
+            <h2 data-i18n="l.hw.h">Homework (AI review)</h2>
+            <button id="hwRefresh" class="small" data-i18n="l.hw.refresh">Refresh</button>
           </div>
-          <div id="hwOverview"><p class="muted">Students submit from their phones (Homework tab).</p></div>
-          <div id="hwMsg"></div>
-          <pre class="out hidden" id="hwOut"></pre>
+          <form id="taskForm" class="row">
+            <input id="hwTask" dir="auto" data-i18n-ph="l.hw.task" maxlength="2000">
+            <button data-i18n="l.hw.save">Save</button>
+          </form>
+          <div id="hwOverview"></div>
+          <div id="hwMsg" aria-live="polite"></div>
+          <pre dir="auto" class="out hidden" id="hwOut"></pre>
         </div>
       </div>
     </section>
   </main>
   <script src="/static/vendor/qrcode.min.js"></script>
+  <script src="/static/i18n.js"></script>
   <script src="/static/common.js"></script>
   <script src="/static/lecturer.js"></script>
 </body>

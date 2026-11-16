@@ -3,40 +3,73 @@
 **Goal:** choose the simplest stack that runs a real demo in this classroom: students on phones,
 one lecturer laptop, unreliable Wi‑Fi, 10 minutes of demo time.
 
-Legend: **✔ tested** = actually run in this project (see the test suite and the demo run on 2026‑11‑03).
-**○ desk review** = evaluated from documentation / previous experience only. Try these yourself before
-submission if you want to cite them as tested.
+Legend: **✔ tested** = actually run in this project (automated tests, a browser run, or the load test; last run 2026‑11‑16).
+**◐ partly tested** = the logic is tested, but not on the real thing (the note says what is missing).
+**○ desk review** = evaluated from documentation only. **Try these yourself before submission** if you want to cite them as tested.
 
 ## 1.1 Existing products (could we just use them?)
 
 | Tool | Covers features | Why not alone | Status |
 |---|---|---|---|
-| Google Forms + Sheets | 1 (attendance), 2 | A static form link can be shared to friends at home; no rotating code; no polls in real time | ○ |
-| Mentimeter / Slido | 3 (polls), 2 (Q&A) | Free tier limits; no attendance; data in a third-party account | ○ |
-| Kahoot | 3 | Quiz-game oriented, not a quick "did you understand?" | ○ |
-| Zoom AI Companion / Meet "Take notes" | 4 | Requires licence/admin; no integration allowed (guideline 1) | ○ |
-| Moodle attendance plugin | 1 | Out of scope (guideline 1: no Moodle integration) | ○ |
+| Google Forms + Sheets | 1 (attendance), 2 | A static form link can be sent to friends at home; no rotating code; no real-time polls | ○ |
+| Mentimeter / Slido | 3 (polls), 2 (Q&A) | Free-tier limits; no attendance; data sits in a third-party account | ○ |
+| Kahoot | 3 | Built for quiz games, not a quick "did you understand?" | ○ |
+| Zoom AI Companion / Meet "Take notes" | 4 | Needs a licence or admin rights; the assignment rules out integration | ○ |
+| Moodle attendance plugin | 1 | Out of scope (no Moodle integration) | ○ |
 
 **Conclusion:** no single tool covers features 1–5, and the most important one (cheat-resistant
 attendance with a spreadsheet) is the weakest in existing tools. We build a small integrated web app
-and **reuse libraries** for the hard parts (QR rendering, LLM).
+and **reuse libraries** for the hard parts (QR rendering, the LLM).
 
 ## 1.2 Building blocks
 
 | Concern | Options considered | Choice | Status | Notes from testing |
 |---|---|---|---|---|
-| Language / server | Node.js + Express, Python + Flask/FastAPI, **Python standard library** (`http.server`) | Python stdlib | ✔ | Node was not installed on the dev laptop; stdlib means `python3 run.py` works with **zero installs**. `ThreadingHTTPServer` handled SSE + API concurrently in the demo. |
-| Real-time updates | WebSockets (socket.io), polling, **Server-Sent Events** | SSE | ✔ | One-way server→phone push is all we need. Built into every browser (`EventSource`), auto-reconnects, plain HTTP. Integration test `test_sse_stream_delivers_events`. |
-| Storage | JSON files, Firebase, **SQLite** | SQLite (`sqlite3`) | ✔ | Single file `classpulse.db`, survives restarts, constraints (`PRIMARY KEY (session_id, student_id)`) enforce "one check-in per student". |
-| QR code | Python `qrcode`/`segno` (pip), **qrcode-generator JS** (MIT, cdnjs) | qrcode-generator 1.4.4, vendored in `static/vendor` | ✔ | Rendered as SVG in the browser; scanned fine from the projector in the dry run. Vendored so it works offline. |
-| Spreadsheet | Google Sheets API, .xlsx writer, **CSV (UTF‑8 BOM)** | CSV + live table | ✔ | BOM makes Excel show Hebrew names correctly (`test_csv_export_has_bom_and_hebrew`). Opens in Excel, Numbers, and Google Sheets (File → Import). |
-| LLM | OpenAI API, local Ollama, **Anthropic Claude API** | Claude (`claude-sonnet-5-5`) over plain HTTPS | ○ (no API key on dev laptop) | Called via `urllib`, no SDK. Prompts tested with a fake client. **Offline fallback** (extractive summary, heuristic review) is ✔ tested, so the demo works even with no key / no internet. |
+| Language / server | Node.js + Express, Python + Flask/FastAPI, **Python standard library** (`http.server`) | Python stdlib | ✔ | Node was not installed on the dev laptop. The stdlib means `python3 run.py` works with **zero installs**. `ThreadingHTTPServer` served 200 simulated phones (see 1.4). |
+| Real-time updates | WebSockets (socket.io), polling, **Server-Sent Events** | SSE | ✔ | One-way server→phone push is all we need. Built into every browser (`EventSource`), reconnects by itself, plain HTTP. A poll reached 200 listening phones in 20 ms. |
+| Storage | JSON files, Firebase, **SQLite** | SQLite (`sqlite3`) | ✔ | One file, survives restarts. Constraints such as `PRIMARY KEY (session_id, student_id)` enforce "one check-in per student" even under a race. Old database files are migrated on start (tested). |
+| QR code | Python `qrcode`/`segno` (pip), **qrcode-generator JS** (MIT, cdnjs) | qrcode-generator 1.4.4, vendored in `static/vendor` | ◐ | Rendered as SVG in the browser and works offline. Not yet scanned by a real phone camera from a projector. |
+| Spreadsheet | Google Sheets API, openpyxl (pip), **own .xlsx writer + CSV** | `classpulse/xlsx.py` (about 100 lines, stdlib `zipfile`) and CSV with BOM | ◐ | The .xlsx is read back and XML-validated in the tests and opens in macOS Quick Look, with Hebrew and right-to-left sheets. Student IDs are stored as text, so a leading zero survives. Not yet opened in Microsoft Excel itself. |
+| LLM | OpenAI API, local Ollama, **Anthropic Claude API** | Claude (`claude-sonnet-5-5`) over plain HTTPS | ◐ | Called with `urllib`, no SDK. Prompts and the long-lecture chunking are tested with a fake client. Not run against the real API (no key on the dev laptop). The **offline fallback** is ✔ tested, so the demo works with no key. |
 | Video → text | Whisper, Zoom transcript | **Use the .vtt transcript** Zoom / Meet already export | ✔ (parser) | Avoids heavy speech-to-text on a laptop. `transcript_to_text` handles VTT, SRT and plain text. |
-| Plagiarism / comparison | embeddings, MOSS, **word 3-gram Jaccard** | 3-gram Jaccard | ✔ | Deterministic and explainable; flagged the copied answer in `test_copy_detection`. |
-| Testing | pytest, **unittest** | unittest | ✔ | 48 tests, ~0.5 s. |
-| Exposure to phones | ngrok / Cloudflare Tunnel, **same Wi‑Fi / laptop hotspot** | LAN / hotspot (`--public-url` for a tunnel) | ✔ (browser, mobile viewport) | Phones must reach the laptop. If the campus Wi‑Fi isolates clients, open a phone hotspot or run a tunnel and pass its URL with `--public-url`. |
+| Plagiarism / comparison | embeddings, MOSS, **word 3-gram Jaccard** | 3-gram Jaccard | ✔ | Deterministic and explainable. Flagged the copied answer in the tests and in the browser run. |
+| Anti-cheating | static link, **rotating secret**, device binding, **location** | Rotating QR + code, one check-in per device, optional GPS circle | ✔ / ◐ | The rotating secret and device rules are ✔. The location check is ◐, see 1.3. |
+| Brute-force protection | none, **rate limiting** | `RateLimiter` (sliding window) on the PIN, the check-in code and comments | ✔ | The sixth PIN guess in a minute gets HTTP 429 (integration test). |
+| Languages | English only, **English + Hebrew** | Text dictionary in `static/i18n.js`, errors translated by code | ✔ | Checked in the browser in both languages, including right-to-left layout on a phone-size screen. |
+| Testing | pytest, **unittest** | unittest | ✔ | 93 tests, about 1 s. |
+| Reaching the phones | **same Wi‑Fi / laptop hotspot**, ngrok / Cloudflare Tunnel | LAN or hotspot; `--public-url` for a tunnel | ◐ | Tested in a browser on the same machine. Not yet tested from real phones on the campus network. The tunnel options are ○. |
 
-## 1.3 Risks found while testing
-- **Client isolation on campus Wi‑Fi** → mitigation: laptop hotspot or tunnel (documented in README).
-- **Camera apps open the link in an in-app browser** → the app uses only standard HTML/JS, no install.
-- **LLM latency (10–30 s)** → UI shows a "Reviewing…" state; offline fallback on any error.
+## 1.3 Location check (GPS): what is and is not possible
+**It is possible, with three real limits.** The feature is built and is optional per class (off / mark far students / block far students).
+
+1. **Browsers demand HTTPS.** A phone's browser shares its location only with a secure page.
+   `http://192.168.x.x:8000` on the classroom Wi‑Fi is not secure, so there the phone sends no location.
+   The check therefore needs an HTTPS address: a tunnel (Cloudflare Tunnel or ngrok, both ○ desk review) or a cloud server.
+   The dashboard itself works on `http://localhost`, which browsers do treat as secure, so the laptop can set the classroom point.
+2. **Indoor accuracy is tens of metres.** GPS is weak inside buildings; phones fall back to Wi‑Fi positioning.
+   The check answers "is the student around the building?" and not "is the student in this room?".
+   That is why the radius is configurable (default 150 m) and the phone gets up to 100 m benefit of the doubt for its reported inaccuracy.
+3. **A determined student can fake a location** (developer tools, mock-location apps). It raises the effort; it is not proof.
+
+Because of limit 1 and 2 there are two modes: **mark** (everyone checks in, far or location-less students get a badge) and **block**.
+Privacy: the server never stores coordinates, only the distance in metres.
+
+Status: ◐. The distance maths, both modes and the HTTP flow are covered by tests, and the whole flow was run in a browser
+with simulated coordinates (a far phone was blocked, a near one accepted). **Not tested on real phones or through a real HTTPS tunnel.**
+
+## 1.4 Load test (measured)
+`tools/simulate_class.py` plays N phones: each loads the page, checks in, keeps a live stream open, votes, and some comment and submit homework.
+Run on 2026‑11‑16 on one Apple M4 laptop, with the simulator and the server on the same machine (so no real network delay is included).
+
+| Phones | Check-in (all) | Check-in, slowest request | Poll reached all phones in | Vote, slowest |
+|---|---|---|---|---|
+| 30 | < 0.1 s, 30/30 | 23 ms | 7 ms | 32 ms |
+| 100 | 0.1 s, 100/100 | 25 ms | 10 ms | 62 ms |
+| 200 | 0.2 s, 200/200 | 36 ms | 20 ms | 128 ms |
+
+## 1.5 Risks found while testing
+- **Client isolation on campus Wi‑Fi** → mitigation: a phone hotspot or a tunnel (documented in the README and the Hebrew guide).
+- **A database reset reuses poll numbers** → phones remembered "already voted" for a new poll. Fixed: votes are remembered per class and poll.
+- **Names were pushed to every phone** in the first version (attendance events went to all listeners). Fixed: a separate staff channel.
+- **Live streams can be held back** by some proxies and tunnels (Cloudflare's quick tunnels are documented as not supporting SSE; ○ not tried). Mitigation: the phone also re-reads the class every 15 s and whenever its screen wakes up, so polls and comments still arrive, a little later.
+- **LLM latency (10–30 s)** → the UI shows a "Reviewing…" state; any error falls back to the offline result.

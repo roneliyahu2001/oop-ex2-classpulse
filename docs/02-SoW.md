@@ -14,20 +14,24 @@ and students open on their phones by scanning a QR code.
 
 ## 2.3 Scope
 **In scope**
-- A responsive web app with two views: a student phone view and a lecturer dashboard.
+- A responsive web app with two views: a student phone view and a lecturer dashboard, in Hebrew and English.
 - A Python backend with SQLite storage and Server-Sent Events.
-- CSV export of attendance.
-- Summaries from Zoom / Meet transcript files (.vtt / .srt / .txt).
-- Homework submitted as text, with similarity analysis and an LLM review (offline fallback when no LLM is available).
+- Attendance by rotating QR or typed code, with late marking, manual corrections and an optional location check.
+- Spreadsheets: an Excel workbook and a CSV per class, and a students × classes workbook for the course.
+- Summaries from Zoom / Meet transcript files (.vtt / .srt / .txt), which the lecturer can share with the students.
+- Homework submitted as text or a text file, with similarity analysis and an LLM review (offline fallback when no LLM is available).
+- A simulator of student phones for rehearsal and load testing.
 - Design documents (SRS, use cases, components, class and sequence diagrams, testing strategy).
 - A 10-minute live demo in class.
 
 **Out of scope** (per the assignment guidelines)
-- Integration with Moodle, Zoom APIs or Google Classroom APIs.
-- Personal data beyond student ID and name. No passwords for students, no photos, no location.
+- Integration with Moodle, Zoom, Google Classroom or the university's student-information system ("מידע אישי").
 - Speech-to-text from raw video files. We use the transcript the platform already produces.
 - Native iOS / Android apps.
 - Multi-lecturer accounts and course management.
+
+**Our own privacy rule (not required by the assignment):** the only personal data stored is the student ID and name.
+No passwords, no photos, and no coordinates (the location check keeps only a distance in metres).
 
 ## 2.4 Deliverables
 | # | Deliverable | Location |
@@ -43,6 +47,8 @@ and students open on their phones by scanning a QR code.
 | D9 | Demo web app | `run.py`, `classpulse/`, `static/` |
 | D10 | Demo script | `docs/09-demo-script.md` |
 | D11 | Conclusions | `docs/10-conclusions.md` |
+| D12 | Simulator / load test | `tools/simulate_class.py` |
+| D13 | User guide in Hebrew | `מדריך.md` |
 
 ## 2.5 Milestones
 | Milestone | Content | Exit criterion |
@@ -50,17 +56,20 @@ and students open on their phones by scanning a QR code.
 | M1 Define | README, scope, tools report | Stack chosen and smoke-tested |
 | M2 Design | SoW, SRS, use cases, components, diagrams | Every SRS requirement maps to a class |
 | M3 Build | Attendance first, then polls/comments, then AI | `python3 -m unittest` is green |
-| M4 Rehearse | Dry run with 3 phones on a hotspot | Check-in in under 10 s per student |
-| M5 Demo and conclude | Live demo, conclusions written | Attendance CSV produced in class |
+| M4 Harden | Rate limits, private staff channel, typed code, location check, Excel, Hebrew | 93 tests green; 200 simulated phones served |
+| M5 Rehearse | Simulator run, then a dry run with 3 real phones on a hotspot | Check-in in under 10 s per student |
+| M6 Demo and conclude | Live demo, conclusions written | Attendance spreadsheet produced in class |
 
 ## 2.6 Assumptions and constraints
 - The lecturer's laptop and the students' phones can reach each other (same Wi-Fi, a hotspot or a tunnel).
+- The location check additionally needs an HTTPS address for the phones (see the tools report, 1.3).
 - An Anthropic API key is optional. Without one, the AI features run in offline mode.
 - Python 3.10 or newer is on the lecturer's laptop. No other installs are needed.
 
 ## 2.7 Acceptance criteria
 - In class, at least 90% of students present check in successfully within 2 minutes.
-- The lecturer downloads a CSV that opens in Excel with correct Hebrew names.
+- The lecturer downloads a spreadsheet that opens in Excel with correct Hebrew names.
+- A forwarded photo of the QR stops working within 40 seconds.
 - A poll is created and results show live in under 2 seconds.
 - A summary is produced from a real .vtt file.
 - A homework review shows comparison statistics and flags a copied submission.
