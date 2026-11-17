@@ -2,7 +2,7 @@
 
 **Introduction to Software Engineering (OOP / OOD), Ex2: Vibe Coding & Deep Designing**
 
-🇮🇱 **[מדריך מלא בעברית, מא׳ ועד ת׳](מדריך.md)**
+🇮🇱 **מדריך מלא בעברית, מא׳ ועד ת׳: [PDF להורדה](מדריך.pdf) · [לקריאה באתר](מדריך.md)**
 
 <p>
 <img src="docs/screenshots/lecturer-dashboard.jpg" width="560" alt="Lecturer dashboard">
@@ -90,7 +90,7 @@ tests/                  unit + integration tests
 ci/                     a ready GitHub Actions workflow (not switched on yet)
 demo/                   sample lecture transcript + sample homework answers
 docs/                   all design documents (below)
-מדריך.md                the full guide in Hebrew
+מדריך.md / מדריך.pdf     the full guide in Hebrew (Markdown and printable PDF)
 ```
 
 ## Design documents (the assignment's to-do list)
