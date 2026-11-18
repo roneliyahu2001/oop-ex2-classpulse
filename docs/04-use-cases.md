@@ -14,6 +14,7 @@ flowchart LR
   L --- UC8[UC8 Review class homework]
   L --- UC10[UC10 Turn on the location check]
   L --- UC11[UC11 Moderate comments]
+  L --- UC12[UC12 Count people in a class photo]
   UC6 -.uses.-> LLM[(Claude API)]
   UC7 -.uses.-> LLM
   UC8 -.uses.-> LLM
@@ -38,6 +39,7 @@ flowchart LR
 | US14 | Lecturer | see attendance across the whole course | I know who keeps missing class | Students × classes table, with % |
 | US15 | Lecturer / student | use the app in Hebrew | it fits our class | Language button, right-to-left |
 | US16 | Lecturer | hide an unsuitable comment | the projector stays clean | Disappears from all screens |
+| US17 | Lecturer | photograph the class and compare the head count with the check-ins | I notice when more students checked in than are in the room | Count shown with boxes; gap highlighted |
 
 ## Detailed use cases
 
@@ -101,3 +103,11 @@ flowchart LR
 2. The browser asks for the laptop's location and sends it to the server as the classroom point.
 3. The dashboard confirms, and warns if the students' address is not HTTPS (phones will then send no location).
 4. From now on UC1 step 4 applies. The lecturer can switch it off at any time, and can always add a student by hand.
+
+### UC12: Count people in a class photo
+1. In the "Head count from a photo" card, the lecturer takes a photo of the class from the front (on a phone the button opens the camera) or chooses one.
+2. The first time, the browser loads the person detector (about 20 MB, from this server; no internet needed).
+3. The browser scans the whole photo and 6 overlapping parts of it, merges duplicate boxes, and shows numbered boxes and the total.
+4. The lecturer clicks a wrong box to remove it, or clicks a missed person to add one, then clicks **Save count**.
+5. The server stores only the number and the time. The card shows "Checked in: 31 · In the photo: 24" and highlights a gap of more than 2. The count also appears in the class Excel workbook (Overview sheet).
+- **Alternative flows:** 1a. The photo can't be opened (for example an iPhone HEIC file in Chrome): a message asks for a JPEG. 2a. The detector can't run in this browser: a message suggests Chrome or Safari; the lecturer can still compare by eye.

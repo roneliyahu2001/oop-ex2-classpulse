@@ -58,4 +58,4 @@ def build_llm_client() -> LLMClient | None:
     key = os.environ.get("ANTHROPIC_API_KEY")
     if not key:
         return None
-    return AnthropicClient(key, os.environ.get("CLASSPULSE_MODEL", "claude-sonnet-5-5"))
+    return AnthropicClient(key, os.environ.get("CLASSICA_MODEL", "claude-sonnet-5-5"))

@@ -42,7 +42,7 @@ CREATE TABLE IF NOT EXISTS submissions (
 """
 
 # Columns added after the first version. Applied to old database files on start,
-# so a classpulse.db from an earlier lecture keeps working.
+# so a classica.db from an earlier lecture keeps working.
 MIGRATIONS = [
     ("sessions", "homework_task", "TEXT NOT NULL DEFAULT ''"),
     ("sessions", "summary", "TEXT NOT NULL DEFAULT ''"),
@@ -51,6 +51,8 @@ MIGRATIONS = [
     ("sessions", "geo_lat", "REAL"),
     ("sessions", "geo_lon", "REAL"),
     ("sessions", "geo_radius", "INTEGER NOT NULL DEFAULT 0"),
+    ("sessions", "headcount", "INTEGER"),
+    ("sessions", "headcount_at", "REAL"),
     ("attendance", "status", "TEXT NOT NULL DEFAULT 'on_time'"),
     ("attendance", "method", "TEXT NOT NULL DEFAULT 'qr'"),
     ("attendance", "ip", "TEXT NOT NULL DEFAULT ''"),
@@ -68,7 +70,7 @@ _COMMENT_SELECT = ("SELECT c.*, (SELECT COUNT(*) FROM comment_upvotes u WHERE u.
 def _session(r: sqlite3.Row) -> ClassSession:
     return ClassSession(r["id"], r["title"], r["started_at"], r["ended_at"], r["homework_task"],
                         r["summary"], bool(r["summary_published"]), r["geo_mode"],
-                        r["geo_lat"], r["geo_lon"], r["geo_radius"])
+                        r["geo_lat"], r["geo_lon"], r["geo_radius"], r["headcount"], r["headcount_at"])
 
 
 def _attendance(r: sqlite3.Row) -> AttendanceRecord:
@@ -154,6 +156,9 @@ class Repository:
                      radius: int) -> None:
         self._exec("UPDATE sessions SET geo_mode=?, geo_lat=?, geo_lon=?, geo_radius=? WHERE id=?",
                    (mode, lat, lon, radius, session_id))
+
+    def set_headcount(self, session_id: str, count: int | None, at: float | None) -> None:
+        self._exec("UPDATE sessions SET headcount=?, headcount_at=? WHERE id=?", (count, at, session_id))
 
     # ---- attendance -----------------------------------------------------
     def add_attendance(self, a: AttendanceRecord) -> bool:

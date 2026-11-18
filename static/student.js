@@ -4,8 +4,8 @@ let sessionId = params.get("s");
 let token = params.get("t");
 let session = null;
 let currentPoll = null;
-let profile = store("cp_profile") || {};
-const votes = store("cp_votes2") || {};         // "session:poll" -> option index
+let profile = store("ca_profile") || {};
+const votes = store("ca_votes2") || {};         // "session:poll" -> option index
 const voteKey = (poll) => `${sessionId}:${poll.id}`;  // poll numbers restart if the database is reset
 const comments = new Map();
 
@@ -52,8 +52,8 @@ async function checkIn(studentId, name, proof) {
     }
     const rec = await api("POST", "/api/checkin", body);
     profile = { student_id: studentId, name };
-    store("cp_profile", profile);
-    store(`cp_in_${sessionId}`, true);
+    store("ca_profile", profile);
+    store(`ca_in_${sessionId}`, true);
     show("#checkinCard", false);
     showMsg($("#banner"), t(rec.status === "late" ? "s.checkedLate" : "s.checked", { time: fmtTime(rec.checked_in_at) }), "ok");
     enterClass();
@@ -91,9 +91,9 @@ function renderPoll(poll) {
 async function vote(i) {
   try {
     const p = await api("POST", `/api/polls/${currentPoll.id}/vote`, { option: i });
-    votes[voteKey(p)] = i; store("cp_votes2", votes); renderPoll(p);
+    votes[voteKey(p)] = i; store("ca_votes2", votes); renderPoll(p);
   } catch (e) {
-    if (e.code === "ALREADY_VOTED") { votes[voteKey(currentPoll)] ??= -1; store("cp_votes2", votes); renderPoll(currentPoll); }
+    if (e.code === "ALREADY_VOTED") { votes[voteKey(currentPoll)] ??= -1; store("ca_votes2", votes); renderPoll(currentPoll); }
     showMsg($("#banner"), errText(e), "err");
   }
 }
@@ -118,7 +118,7 @@ async function upvote(id) {
   catch (e) { showMsg($("#commentMsg"), errText(e), "warn"); }
 }
 
-const outbox = () => store("cp_outbox") || [];
+const outbox = () => store("ca_outbox") || [];
 async function flushOutbox() {
   const pending = outbox();
   if (!pending.length) return;
@@ -127,7 +127,7 @@ async function flushOutbox() {
     try { await api("POST", `/api/sessions/${item.sid}/comments`, item.body); }
     catch (e) { if (!e.status || e.status === 429) left.push(item); } // keep what may still succeed later
   }
-  store("cp_outbox", left);
+  store("ca_outbox", left);
   if (!left.length) showMsg($("#commentMsg"), t("s.c.flushed"), "ok");
 }
 
@@ -140,7 +140,7 @@ $("#commentForm").addEventListener("submit", async (e) => {
     $("#commentText").value = "";
   } catch (err) {
     if (err.status) return showMsg($("#commentMsg"), errText(err), "err");
-    store("cp_outbox", [...outbox(), { sid: sessionId, body }]);
+    store("ca_outbox", [...outbox(), { sid: sessionId, body }]);
     showMsg($("#commentMsg"), t("s.c.queued"), "warn");
     $("#commentText").value = "";
   }
@@ -240,18 +240,18 @@ async function boot() {
     // The student typed the address instead of scanning: join the class that is open now,
     // or go back to the last class they attended.
     try { sessionId = (await api("GET", "/api/active")).session?.id; } catch { /* offline */ }
-    sessionId ||= store("cp_session");
+    sessionId ||= store("ca_session");
   }
   if (!sessionId) return show("#noSession");
   try {
     ({ session, poll: currentPoll } = await api("GET", `/api/sessions/${sessionId}`));
   } catch (e) {
-    if (e.status === 404) store("cp_session", null);
+    if (e.status === 404) store("ca_session", null);
     return show("#noSession");
   }
-  store("cp_session", sessionId);
+  store("ca_session", sessionId);
   $("#sessionTitle").textContent = session.title;
-  if (store(`cp_in_${sessionId}`) || !session.is_active) return enterClass();
+  if (store(`ca_in_${sessionId}`) || !session.is_active) return enterClass();
 
   $("#sid").value = profile.student_id || "";
   $("#sname").value = profile.name || "";

@@ -17,6 +17,8 @@ class ClassSession:
     geo_lat: float | None = None
     geo_lon: float | None = None
     geo_radius: int = 0             # metres
+    headcount: int | None = None    # people the lecturer's class photo shows (counted in the browser)
+    headcount_at: float | None = None
 
     @property
     def is_active(self) -> bool:
@@ -28,6 +30,8 @@ class ClassSession:
         if not lecturer:
             d.pop("geo_lat")        # students only need to know that a check exists
             d.pop("geo_lon")
+            d.pop("headcount")      # lecturer's own check on the class
+            d.pop("headcount_at")
             if not self.summary_published:
                 d["summary"] = ""   # drafts stay with the lecturer
         return d

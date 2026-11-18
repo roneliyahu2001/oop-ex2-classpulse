@@ -6,10 +6,12 @@
 - **All 5 features are implemented** in one web app that needs zero installs (Python standard library only; about 2,300 lines of Python, 1,400 of front-end and 1,000 of tests).
 - **Attendance, the main feature,** works with a rotating QR and a typed 6-digit code (HMAC, 20 s). It enforces one check-in per student and one per phone, marks late arrivals, lets the lecturer fix the list by hand, and can check the phone's location. The lecturer gets a live table, an Excel workbook per class, a CSV and a students × classes report.
   - Demo in class: ▢ students checked in within ▢ seconds. ▢ failures, caused by ▢.
+- **Head count from a photo**: the lecturer photographs the class and the browser counts the people (TensorFlow.js, offline), so the number of check-ins can be compared with the number of people in the room. The photo is never uploaded and nobody is identified.
+  - Demo in class: ▢ people in the room, the photo found ▢.
 - **Polls and comments** update live over Server-Sent Events. Comments survive an offline phone thanks to a local outbox, and the lecturer can mark them answered or hide them.
 - **AI features** (summary and homework review) sit behind Strategy interfaces with an offline fallback. The demo never depends on internet access or an API key. A summary can be edited and shared to the students' phones.
 - **Hebrew and English**, including right-to-left screens and spreadsheets.
-- **Quality:** 93 automated tests (unit and integration) run in about 1 s. Every SRS "Must" requirement traces to a class and a test (SRS section 5). A simulator played 200 phones against the server on one laptop: every check-in succeeded and a live poll reached all of them in 20 ms.
+- **Quality:** 97 automated tests (unit and integration) run in about 1 s. Every SRS "Must" requirement traces to a class and a test (SRS section 5). A simulator played 200 phones against the server on one laptop: every check-in succeeded and a live poll reached all of them in 20 ms.
 
 ## What worked well
 - **Designing first** (SRS, then classes, then tests) made the build fast. The design documents told us exactly which classes to write.
@@ -27,6 +29,7 @@ Reviewing the first version critically was worth it. Three real problems came up
 - The server must be reachable from the phones. Campus Wi-Fi with client isolation is the main operational risk, so a hotspot or tunnel is needed.
 - **The location check is a deterrent, not proof.** It needs an HTTPS address, indoor accuracy is tens of metres, and a determined student can fake a location (tools report, 1.3).
 - A device cookie can be cleared by a determined student. The same-address hint catches the simple cases on a local network.
+- **The photo head count undercounts.** A small detector that runs in the browser misses people at the back or partly hidden. The lecturer corrects it by clicking; a larger model would be more accurate but much heavier.
 - 3-gram similarity catches copy-paste but not paraphrasing. Embeddings would be the next step.
 - An LLM grade suggestion is advice only. The lecturer stays the decision maker.
 - Not yet tried on real phones, with the real Claude API, or in Microsoft Excel itself (testing strategy, 8.7).

@@ -1,4 +1,4 @@
-from classpulse.app import ClassPulseApp, Config
+from classica.app import ClassicaApp, Config
 
 # A point on a campus, and two phones: one about 55 m away, one about 11 km away.
 CLASSROOM = (32.1133, 34.8044)
@@ -19,11 +19,11 @@ class FakeClock:
         self.t += seconds
 
 
-_apps: list[ClassPulseApp] = []
+_apps: list[ClassicaApp] = []
 
 
-def make_app(clock=None, llm=None, db: str = ":memory:") -> ClassPulseApp:
-    app = ClassPulseApp(Config(db_path=db, lecturer_pin="1234", public_url="http://test",
+def make_app(clock=None, llm=None, db: str = ":memory:") -> ClassicaApp:
+    app = ClassicaApp(Config(db_path=db, lecturer_pin="1234", public_url="http://test",
                                secret=b"k" * 32),
                         llm=llm, clock=clock or FakeClock())
     _apps.append(app)

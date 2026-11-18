@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Simulates a class of student phones against a running ClassPulse server.
+"""Simulates a class of student phones against a running Classica server.
 
 Use it to rehearse the demo alone (the dashboard fills up as if a real class
 scanned the QR), and as a load test that prints response times.
@@ -199,7 +199,7 @@ def simulate(url: str, pin: str, students: int = 30, session_id: str | None = No
 
 
 def main() -> None:
-    p = argparse.ArgumentParser(description="Simulate student phones against a running ClassPulse server")
+    p = argparse.ArgumentParser(description="Simulate student phones against a running Classica server")
     p.add_argument("--url", default="http://localhost:8000")
     p.add_argument("--pin", required=True, help="the lecturer PIN printed by run.py")
     p.add_argument("--students", type=int, default=30)

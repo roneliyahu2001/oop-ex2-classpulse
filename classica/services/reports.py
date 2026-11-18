@@ -24,9 +24,18 @@ class ReportService:
 
     def session_workbook(self, session_id: str, lang: str = "en") -> bytes:
         """Everything that happened in one class: attendance, polls and comments."""
-        self._sessions.get(session_id)
+        session = self._sessions.get(session_id)
         L = lambda key, **kw: tr(lang, key, **kw)  # noqa: E731
         wb = Workbook(rtl=lang == "he")
+
+        checked_in = len(self._repo.list_attendance(session_id))
+        rows = [[L("session"), session.title], [L("date"), _date(session.started_at)],
+                [L("checked_in"), checked_in]]
+        if session.headcount is None:
+            rows.append([L("headcount"), L("not_counted")])
+        else:
+            rows += [[L("headcount"), session.headcount], [L("headcount_gap"), checked_in - session.headcount]]
+        wb.add_sheet(L("overview"), rows, [36, 40])
 
         rows = [[L("num"), L("student_id"), L("name"), L("time"), L("status"), L("method"), L("location")]]
         for i, r in enumerate(self._repo.list_attendance(session_id), 1):
@@ -64,7 +73,8 @@ class ReportService:
             st["present"] = sum(1 for m in st["marks"] if m)
             st["percent"] = round(100 * st["present"] / len(sessions)) if sessions else 0
         return {"sessions": [{"id": s.id, "title": s.title, "date": _date(s.started_at),
-                              "count": sum(1 for st in rows if st["marks"][col])}
+                              "count": sum(1 for st in rows if st["marks"][col]),
+                              "headcount": s.headcount}
                              for col, s in enumerate(sessions)],
                 "students": rows}
 

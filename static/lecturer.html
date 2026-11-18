@@ -3,13 +3,13 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>ClassPulse Lecturer</title>
+  <title>Classica Lecturer</title>
   <link rel="icon" href="/static/icon.svg">
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
   <header>
-    <div><h1 data-i18n="l.title">ClassPulse · Lecturer</h1><div class="sub" id="headerSub"></div></div>
+    <div><h1><img src="/static/icon.svg" alt=""><span data-i18n="l.title">Classica · Lecturer</span></h1><div class="sub" id="headerSub"></div></div>
     <div class="row">
       <select id="sessionPicker" class="hidden auto"></select>
       <button class="danger hidden" id="endBtn" data-i18n="l.end">End class</button>
@@ -98,6 +98,25 @@
         </div>
 
         <div class="card">
+          <h2 data-i18n="l.hc.h">Head count from a photo</h2>
+          <p class="muted" data-i18n="l.hc.p"></p>
+          <label class="button primary file-button">
+            <span data-i18n="l.hc.pick">Choose or take a photo</span>
+            <input type="file" id="hcFile" accept="image/*" capture="environment">
+          </label>
+          <div id="hcMsg" aria-live="polite"></div>
+          <canvas id="hcCanvas" class="hidden hc-canvas"></canvas>
+          <div id="hcActions" class="hidden">
+            <div class="row between">
+              <strong id="hcCount"></strong>
+              <button class="primary" id="hcSave" data-i18n="l.hc.save">Save count</button>
+            </div>
+            <div class="muted" data-i18n="l.hc.edit"></div>
+          </div>
+          <div id="hcCompare"></div>
+        </div>
+
+        <div class="card">
           <h2 data-i18n="l.poll.h">Quick poll</h2>
           <div class="row templates">
             <button data-tpl="l.poll.t1" data-i18n="l.poll.t1"></button>
@@ -151,6 +170,7 @@
   <script src="/static/vendor/qrcode.min.js"></script>
   <script src="/static/i18n.js"></script>
   <script src="/static/common.js"></script>
+  <script src="/static/headcount.js"></script>
   <script src="/static/lecturer.js"></script>
 </body>
 </html>

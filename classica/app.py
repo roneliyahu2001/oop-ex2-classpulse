@@ -22,7 +22,7 @@ from .tokens import TokenRotator
 
 @dataclass
 class Config:
-    db_path: str = "classpulse.db"
+    db_path: str = "classica.db"
     lecturer_pin: str = ""
     public_url: str = "http://localhost:8000"
     token_period: int = 20
@@ -30,7 +30,7 @@ class Config:
     secret: bytes = b""
 
 
-class ClassPulseApp:
+class ClassicaApp:
     def __init__(self, config: Config, llm: LLMClient | None = None,
                  clock: Callable[[], float] = time.time):
         self.config = config

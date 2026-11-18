@@ -10,7 +10,7 @@ WEBVTT
 <v Lecturer>The first pattern is the strategy pattern. Strategy defines a family of algorithms, puts each one in its own class, and makes them interchangeable behind one interface.
 
 00:00:24.000 --> 00:00:34.000
-<v Lecturer>For example, our ClassPulse summary service can use an LLM summarizer or an extractive summarizer. Both implement the same Summarizer interface.
+<v Lecturer>For example, our Classica summary service can use an LLM summarizer or an extractive summarizer. Both implement the same Summarizer interface.
 
 00:00:34.000 --> 00:00:44.000
 <v Lecturer>The second pattern is the observer pattern. An observer subscribes to a subject and is notified whenever the subject changes state.

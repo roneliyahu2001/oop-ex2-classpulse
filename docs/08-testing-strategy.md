@@ -9,8 +9,8 @@
 ## 8.2 Test levels
 | Level | What | Tooling | Where |
 |---|---|---|---|
-| Unit | One class, with collaborators replaced by fakes (`FakeClock`, `FakeLLMClient`, in-memory SQLite) | `unittest` | `tests/test_services.py` (82 tests) |
-| Integration | A real `ThreadingHTTPServer` on a random port, real HTTP, cookies (one cookie jar per simulated phone), real SSE streams | `unittest` + `urllib` | `tests/test_web.py` (11 tests) |
+| Unit | One class, with collaborators replaced by fakes (`FakeClock`, `FakeLLMClient`, in-memory SQLite) | `unittest` | `tests/test_services.py` (84 tests) |
+| Integration | A real `ThreadingHTTPServer` on a random port, real HTTP, cookies (one cookie jar per simulated phone), real SSE streams | `unittest` + `urllib` | `tests/test_web.py` (13 tests) |
 | Load / rehearsal | N simulated phones against a running server, with timings | `tools/simulate_class.py` | Results in the tools report, 1.4 |
 | System / manual | The full flow in a browser: desktop dashboard plus a phone-size viewport, in Hebrew and English | Browser, real phones | Checklist in 8.6 |
 | Acceptance | The live demo against the SoW acceptance criteria | Real class | `docs/09-demo-script.md` |
@@ -19,7 +19,7 @@ Run them all with:
 ```bash
 python3 -m unittest discover -s tests -t .
 ```
-Current result: **93 tests, all passing, about 1.2 s.**
+Current result: **97 tests, all passing, about 1.2 s.**
 A ready GitHub Actions workflow is kept in `ci/github-actions-tests.yml`. It runs the same command on Python 3.10 and 3.13. It is **not active yet**: to turn it on, add it on the GitHub website as `.github/workflows/tests.yml`.
 
 ## 8.3 Unit tests per class (maps to the class diagrams)
@@ -30,12 +30,12 @@ A ready GitHub Actions workflow is kept in `ci/github-actions-tests.yml`. It run
 | `GeoFence`, `haversine_m` | Known distances | one degree of latitude ≈ 111.2 km; inside and outside the circle; the accuracy credit helps a near phone and is capped at 100 m for a far one; invalid coordinates |
 | `EventBus` | State | publish reaches only that channel's subscribers; one queue follows two channels (public + staff); unsubscribe |
 | `Repository` | Migration test on a real file, plus constraints through the services | a version-1 database file is upgraded and readable; uniqueness constraints (attendance, vote, upvote, submission) |
-| `SessionService` | Equivalence classes | start trims the title; empty title is rejected; can't end twice; unknown ID gives 404; `active()` is the newest open class; a summary is a draft until published and an empty one can't be published; homework task; geofence validation, radius clamping, coordinates hidden from students |
+| `SessionService` | Equivalence classes | head count saved, hidden from students, cleared with `None`, out-of-range rejected; start trims the title; empty title is rejected; can't end twice; unknown ID gives 404; `active()` is the newest open class; a summary is a draft until published and an empty one can't be published; homework task; geofence validation, radius clamping, coordinates hidden from students |
 | `AttendanceService` | Decision table (token × session × duplicate student × duplicate device × location mode) | happy path; names only on the staff channel; re-scan is idempotent; same student on another device; one device for two students; expired token; typed code; late after 15 minutes; invalid ID or name; closed session; manual add and remove; shared-address hint; CSV BOM, Hebrew headers and formula escaping; location off / block (far, missing, invalid, near) / mark (far, none, ok); manual add bypasses the location check |
 | `CommentService` | Equivalence and boundary (0 and 501 chars) | anonymous by default; one upvote per device; posting after the class ends; answered and hidden flags are independent; a hidden comment is not listed and can't be upvoted |
 | `PollService` | State machine (open → closed) | vote counts; one vote per device; a new poll closes the old one; closed poll rejects votes; 1 or 7 options rejected; bad option index (too high, negative) |
 | `Workbook` | Round trip: write, unzip, parse every XML part | column letters up to AAA; Hebrew, `<&>"` and empty cells survive; IDs stay text and numbers stay numbers; illegal sheet names are fixed and made unique; right-to-left flag |
-| `ReportService` | Fixture of two classes a week apart | course matrix (marks, counts, percentages, latest name wins); course workbook rows; session workbook has three sheets, omits hidden comments, Hebrew sheet names |
+| `ReportService` | Fixture of two classes a week apart | course matrix (marks, counts, percentages, latest name wins, head count); course workbook rows; session workbook has four sheets (overview with check-ins vs. head count), omits hidden comments, Hebrew sheet names |
 | `text_tools` | Example-based | VTT timestamps and `<v>` tags removed; `split_chunks` respects the size and loses no words |
 | `SummaryService`, `ExtractiveSummarizer`, `LLMSummarizer` | Strategy substitution, fault injection | offline summary (English and Hebrew labels); LLM used when present (one call); a long lecture makes n + 1 calls; **fallback when the LLM raises**; too short; sentence limit |
 | `ReviewService`, `SimilarityAnalyzer`, `HeuristicReviewer`, `LLMReviewer` | Fixture texts (good, different, short, copied) | resubmit from the same phone replaces and notifies the dashboard; another phone can't overwrite until the lecturer deletes; too short; student view hides identities; a student can't read someone else's review; lecturer view shows identities; Hebrew offline review; first submitter gets no comparison; copy detection flags the pair; missing concepts found; the LLM prompt contains the lecturer's task and the comparison; no submission gives 404 |
@@ -51,6 +51,8 @@ A ready GitHub Actions workflow is kept in `ci/github-actions-tests.yml`. It run
 | `test_full_class_flow` | Check-in by QR and by typed code; friend check-in blocked; manual add and remove; CSV, Excel and course report; poll, vote, double vote, bad vote; comment, upvote, hide; homework task, submit, private review, overwrite blocked, lecturer review and delete; end of class |
 | `test_summary_is_saved_as_a_draft_then_shared` | Students don't see a draft; they see the edited summary once shared |
 | `test_location_check_over_http` | Block mode over real HTTP: no location, far and near phones; coordinates never reach students; switching off |
+| `test_head_count_over_http` | Only the lecturer can save a head count; non-integers are rejected; students never see it |
+| `test_detection_model_is_served_and_cached` | The detector's files are served, and cached by the browser while our own code is not |
 | `test_comment_flood_is_slowed_down` | The sixth comment from one phone gets 429; another phone is unaffected |
 | `test_bad_requests` | Broken JSON, a JSON list, an unknown class and an unknown path give 400 / 404, never 500 |
 | `test_live_stream_keeps_names_away_from_students` | The dashboard stream gets the attendance event (a count); the student stream gets only the comment |
@@ -81,11 +83,13 @@ A ready GitHub Actions workflow is kept in `ci/github-actions-tests.yml`. It run
 - [ ] With `ANTHROPIC_API_KEY` set, the summary and review report `method: llm`.
 - [ ] (Only if you use it) Location check through an HTTPS tunnel: a phone in the room is accepted; with "block", a phone with location denied is rejected.
 - [ ] `python3 tools/simulate_class.py --pin <PIN> --students 30` ends with `RESULT: all good`.
+- [ ] Photograph the room with a few people in it: boxes appear, a click removes or adds one, Save stores the number, and the gap with the check-ins is shown.
 
 ## 8.7 What is not covered (known gaps)
 - **Real phones.** Everything was run in a desktop browser (also at phone size) and by simulated phones. Scanning the projected QR with a real camera, Safari on iOS and the campus Wi-Fi have not been tried yet.
 - **The location check on real hardware.** The logic is tested with simulated coordinates. It has not been tried on a real phone or through an HTTPS tunnel.
 - **The real Claude API.** Prompts are tested with a fake client. The quality of the LLM output is judged by hand, not asserted.
+- **Head count accuracy.** The detector was tried only on 4 sample classroom photos from Wikimedia Commons, by eye. It misses people at the back or partly hidden; there is no measured accuracy on a photo of our own class. The automatic tests cover the server side only (saving and comparing the number).
 - **Microsoft Excel itself.** The .xlsx files are validated and open in macOS Quick Look; they were not opened in Excel.
 - **Network delay.** The load test ran on one machine, so its numbers show server capacity, not Wi-Fi quality.
 - **Other Python versions.** The tests ran only on Python 3.15 on the development laptop. The GitHub Actions workflow that would run them on 3.10 and 3.13 is written but not switched on (see 8.2).

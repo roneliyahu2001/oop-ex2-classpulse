@@ -44,7 +44,7 @@ function store(key, value) {
 }
 
 // ---- language -------------------------------------------------------------
-const LANG = store("cp_lang") || ((navigator.language || "en").toLowerCase().startsWith("he") ? "he" : "en");
+const LANG = store("ca_lang") || ((navigator.language || "en").toLowerCase().startsWith("he") ? "he" : "en");
 
 function t(key, vars = {}) {
   let s = I18N[LANG][key] ?? I18N.en[key] ?? key;
@@ -66,7 +66,7 @@ function applyI18n() {
   const btn = $("#langBtn");
   if (btn) {
     btn.textContent = LANG === "he" ? "English" : "עברית";
-    btn.onclick = () => { store("cp_lang", LANG === "he" ? "en" : "he"); location.reload(); };
+    btn.onclick = () => { store("ca_lang", LANG === "he" ? "en" : "he"); location.reload(); };
   }
 }
 

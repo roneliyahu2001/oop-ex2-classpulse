@@ -12,7 +12,7 @@ flowchart LR
       WEB[Web layer<br/>Handler / router / SSE]
       SVC[Service layer]
       REPO[Repository]
-      DB[(classpulse.db<br/>SQLite)]
+      DB[(classica.db<br/>SQLite)]
     end
     SIM[tools/simulate_class.py<br/>simulated phones]
   end
@@ -31,9 +31,10 @@ flowchart LR
 |---|---|---|---|
 | **Student client** | `static/student.html`, `student.js` | Check-in (QR, typed code, location), poll, comments with an offline outbox, homework, shared summary | REST API, SSE |
 | **Lecturer client** | `static/lecturer.html`, `lecturer.js` | QR and code display, live tables, manual fixes, location-check switch, polls, moderation, AI tools, course report | REST API, SSE, `vendor/qrcode.min.js` |
+| **Head counter** | `static/headcount.js` | Loads the person detector on first use, scans the photo in tiles, merges boxes, lets the lecturer correct them, saves the number | `vendor/tfjs/` (TensorFlow.js, COCO-SSD, model), REST API |
 | **Screen texts** | `static/i18n.js`, `common.js` | English / Hebrew dictionary, right-to-left switch, error translation by code | none |
-| **Web layer** | `classpulse/web.py` | Routing, JSON in and out, cookies (device and lecturer), rate limiting, static files, SSE stream, mapping errors to HTTP codes | Services |
-| **Composition root** | `classpulse/app.py`, `run.py` | Builds and wires all objects (dependency injection), reads the config | Everything |
+| **Web layer** | `classica/web.py` | Routing, JSON in and out, cookies (device and lecturer), rate limiting, static files, SSE stream, mapping errors to HTTP codes | Services |
+| **Composition root** | `classica/app.py`, `run.py` | Builds and wires all objects (dependency injection), reads the config | Everything |
 | **Session management** | `services/sessions.py` | Session lifecycle, homework task, saved summary, geofence settings | Repository, EventBus |
 | **Attendance** | `services/attendance.py`, `tokens.py`, `geo.py` | Token and code validation, anti-cheating rules, late marking, location check, manual fixes, CSV | Sessions, TokenRotator, GeoFence |
 | **Reports** | `services/reports.py`, `xlsx.py` | Excel workbook per class, students × classes matrix | Repository, Workbook |
@@ -54,7 +55,8 @@ flowchart LR
 2. Services raise `DomainError(code, message, status)`. The web layer turns it into a JSON error, and the browser translates it by `code`. Services never format HTTP.
 3. Time, the LLM and the secret are **injected**, so tests replace them with `FakeClock` and `FakeLLMClient`.
 4. AI features follow the **Strategy** pattern with a mandatory offline fallback, so a missing API key never breaks the demo.
-5. **Who may see what** is decided on the server: names travel only on the staff channel, and `to_dict()` methods drop device IDs, network addresses, draft summaries and the classroom coordinates.
+5. **Heavy work that touches personal images stays on the client.** The class photo is analysed in the lecturer's browser; the server receives only a number.
+6. **Who may see what** is decided on the server: names travel only on the staff channel, and `to_dict()` methods drop device IDs, network addresses, draft summaries and the classroom coordinates.
 
 ## 5.4 REST API summary
 | Method | Path | Who | Purpose |
@@ -66,6 +68,7 @@ flowchart LR
 | POST | `/api/sessions/{id}/homework-task` | lecturer | Set the assignment question |
 | POST | `/api/sessions/{id}/geofence` | lecturer | Turn the location check on (mode, point, radius) or off |
 | GET | `/api/sessions/{id}/qr` | lecturer | The current check-in URL, the 6-digit code and the seconds left |
+| POST | `/api/sessions/{id}/headcount` | lecturer | Save (or clear with `null`) the number of people in the class photo |
 | GET | `/api/sessions/{id}` | anyone | Title, open poll, homework task, shared summary, location-check mode |
 | POST | `/api/checkin` | student | Check in (token or code, optional location) |
 | GET/POST | `/api/sessions/{id}/attendance` | lecturer | The attendance table / add a student by hand |

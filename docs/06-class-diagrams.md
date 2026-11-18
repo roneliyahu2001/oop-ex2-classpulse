@@ -1,6 +1,6 @@
 # 6. Low-level Class Diagrams
 
-The diagrams match the code in `classpulse/`. They render on GitHub (Mermaid).
+The diagrams match the code in `classica/`. They render on GitHub (Mermaid).
 
 ## 6.1 Domain model (`models.py`)
 ```mermaid
@@ -17,6 +17,8 @@ classDiagram
     +float geo_lat
     +float geo_lon
     +int geo_radius
+    +int headcount
+    +float headcount_at
     +is_active() bool
     +to_dict(lecturer) dict
   }
@@ -73,13 +75,13 @@ classDiagram
   ClassSession "1" o-- "*" Submission
 ```
 Notes: `status` is `on_time` or `late`. `method` is `qr`, `code` or `manual`. `geo` is empty, `ok`, `far` or `none`.
-`ClassSession.to_dict(lecturer=False)` drops the classroom coordinates and an unpublished summary.
+`ClassSession.to_dict(lecturer=False)` drops the classroom coordinates, the head count and an unpublished summary.
 `AttendanceRecord.to_dict()` drops `device_id` and `ip`.
 
 ## 6.2 Core services (sessions, attendance, polls, comments)
 ```mermaid
 classDiagram
-  class ClassPulseApp {
+  class ClassicaApp {
     +Config config
     +bytes secret
     +EventBus bus
@@ -115,6 +117,7 @@ classDiagram
     +set_homework_task(id, task)
     +set_summary(id, summary, published)
     +set_geofence(id, mode, lat, lon, radius)
+    +set_headcount(id, count, at)
     +add_attendance(rec) bool
     +find_attendance(sid, key) AttendanceRecord
     +list_attendance(sid) list
@@ -168,6 +171,7 @@ classDiagram
     +set_homework_task(id, task) ClassSession
     +save_summary(id, summary, published) ClassSession
     +set_geofence(id, mode, lat, lon, radius) ClassSession
+    +set_headcount(id, count) ClassSession
   }
   class AttendanceService {
     -int _late_after
@@ -191,15 +195,15 @@ classDiagram
     +moderate(cid, answered, hidden) Comment
     +list(sid, include_hidden) list
   }
-  ClassPulseApp *-- Config
-  ClassPulseApp *-- Repository
-  ClassPulseApp *-- EventBus
-  ClassPulseApp *-- TokenRotator
-  ClassPulseApp *-- RateLimiter
-  ClassPulseApp *-- SessionService
-  ClassPulseApp *-- AttendanceService
-  ClassPulseApp *-- PollService
-  ClassPulseApp *-- CommentService
+  ClassicaApp *-- Config
+  ClassicaApp *-- Repository
+  ClassicaApp *-- EventBus
+  ClassicaApp *-- TokenRotator
+  ClassicaApp *-- RateLimiter
+  ClassicaApp *-- SessionService
+  ClassicaApp *-- AttendanceService
+  ClassicaApp *-- PollService
+  ClassicaApp *-- CommentService
   SessionService --> Repository
   SessionService --> EventBus
   AttendanceService --> SessionService
@@ -321,9 +325,9 @@ classDiagram
 classDiagram
   class BaseHTTPRequestHandler
   class ThreadingHTTPServer
-  class ClassPulseApp
+  class ClassicaApp
   class Handler {
-    +ClassPulseApp app
+    +ClassicaApp app
     +is_lecturer() bool
     +device_id() str
     +peer_ip() str
@@ -344,10 +348,37 @@ classDiagram
   BaseHTTPRequestHandler <|-- Handler
   ThreadingHTTPServer <|-- Server
   Server o-- Handler : one per request thread
-  Handler --> ClassPulseApp
+  Handler --> ClassicaApp
 ```
 
-## 6.6 Design decisions (OOD principles)
+## 6.6 Head counter (browser module `static/headcount.js`)
+The module is a closure that exposes three functions; it is drawn as a class for clarity.
+```mermaid
+classDiagram
+  class HeadCount {
+    -Promise modelPromise
+    -Image photo
+    -list boxes
+    -load() Promise
+    -tiles(W, H) list
+    -merge(found) list
+    -draw()
+    -onClick(event)
+    -save()
+    +detect(img, onProgress) list
+    +render()
+    +reset()
+  }
+  class CocoSsdModel {
+    <<library>>
+    +detect(image, maxBoxes, minScore) list
+  }
+  class Handler
+  HeadCount ..> CocoSsdModel : loads lazily
+  HeadCount ..> Handler : POST /headcount (number only)
+```
+
+## 6.7 Design decisions (OOD principles)
 | Principle / pattern | Where | Why |
 |---|---|---|
 | **Single Responsibility** | Each service owns one feature. `Repository` owns SQL. `Handler` owns HTTP. `Workbook` owns the file format. | Each class has one reason to change |
@@ -355,8 +386,9 @@ classDiagram
 | **Strategy** | Summarizer and Reviewer implementations | Lets the AI path and the offline path be swapped |
 | **Observer (pub/sub)** | `EventBus` with SSE subscribers, public and staff channels | Live updates without polling, and names reach only the lecturer |
 | **Repository** | `Repository` | Persistence is isolated from the domain, including schema upgrades |
-| **Composition root / DI** | `ClassPulseApp` | One place builds the graph. Tests inject `FakeClock` |
+| **Composition root / DI** | `ClassicaApp` | One place builds the graph. Tests inject `FakeClock` |
 | **Value objects** | dataclasses in `models.py`, the frozen `GeoFence` | Simple, comparable, serialisable |
 | **Information hiding** | `to_dict()` methods drop `device_id`, `ip`, coordinates, draft summaries and classmates' identities | Privacy (NFR-5) is enforced in one place per entity |
 | **Open/closed** | A new check-in rule (late marking, location) was added inside `AttendanceService` without touching the web layer or other services | Features grow without rewrites |
+| **Privacy by design** | The class photo is analysed in the browser; only a number reaches the server. People are counted, not identified | No biometric data is ever stored |
 | **Fail safe** | `SummaryService` and `ReviewService` catch any LLM failure and fall back | The demo never depends on the network |

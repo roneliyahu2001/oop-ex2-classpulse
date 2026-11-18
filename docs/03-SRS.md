@@ -1,7 +1,7 @@
-# 3. Software Requirements Specification (SRS): ClassPulse
+# 3. Software Requirements Specification (SRS): Classica
 
 ## 1. Introduction
-**1.1 Purpose.** This document specifies the requirements for ClassPulse, a web-based teaching tool used in class.
+**1.1 Purpose.** This document specifies the requirements for Classica, a web-based teaching tool used in class.
 **1.2 Audience.** The course staff, the developers, and the testers.
 **1.3 Definitions.**
 - **Session**: one class meeting.
@@ -13,7 +13,7 @@
 - **LLM**: a large language model (Claude).
 
 ## 2. Overall description
-**2.1 Product perspective.** ClassPulse is a standalone web app served from the lecturer's laptop. It has no external integrations.
+**2.1 Product perspective.** Classica is a standalone web app served from the lecturer's laptop. It has no external integrations.
 
 **2.2 Users**
 | User | Device | Technical level | Needs |
@@ -60,6 +60,7 @@
 | FR-A12 | The lecturer's table hints when two check-ins came from the same network address (possibly one phone used twice). | Could |
 | FR-A13 | The lecturer downloads an Excel workbook per session with three sheets: attendance, polls, comments. | Must |
 | FR-A14 | The lecturer sees and downloads a course report: students × sessions, with a count and percentage per student. | Should |
+| FR-A15 | **Head count from a photo.** The lecturer takes or chooses a photo of the class. People in it are detected in the lecturer's browser and shown as numbered boxes; the lecturer can remove a wrong box or add a missed person by clicking. The saved count is compared with the number of check-ins, and a gap of more than 2 is highlighted. The photo is never uploaded; only the number is stored. People are counted, never identified. | Should |
 
 ### 3.3 Comments
 | ID | Requirement | Priority |
@@ -106,7 +107,7 @@
 | NFR-2 | Performance | Supports 100 concurrent phones on one laptop. Live updates arrive in under 2 s. Measured: 200 simulated phones, slowest live update 20 ms (tools report, 1.4). |
 | NFR-3 | Availability | All non-AI features work with no internet, given a local network. |
 | NFR-4 | Security | Lecturer endpoints require the PIN cookie. PIN guesses are limited to 5 per minute per address, check-in attempts to 10 per minute per phone. Tokens are HMAC-signed. Static file serving blocks path traversal. Pages carry a Content-Security-Policy. Exported cells cannot run as spreadsheet formulas. |
-| NFR-5 | Privacy | Only the student ID and name are stored, in a local SQLite file. Names and IDs are pushed only to the lecturer's dashboard, never to other phones. Responses never include device IDs, network addresses or the classroom coordinates. |
+| NFR-5 | Privacy | Only the student ID and name are stored, in a local SQLite file. Class photos stay in the lecturer's browser; no face recognition. Names and IDs are pushed only to the lecturer's dashboard, never to other phones. Responses never include device IDs, network addresses or the classroom coordinates. |
 | NFR-6 | Portability | Uses only the Python standard library and runs on macOS, Windows and Linux. |
 | NFR-7 | Maintainability | Layered design (web → services → repository). Dependencies are injected so every service has unit tests. A database file from an older version is upgraded on start. |
 | NFR-8 | Localisation | Hebrew works end to end: screens (right-to-left), names in the database, CSV and Excel (right-to-left sheets), and the offline AI texts. |
@@ -122,6 +123,7 @@
 | FR-A11 | `GeoFence`, `AttendanceService._locate`, `SessionService.set_geofence` | `GeoTest`, `test_block_mode`, `test_flag_mode_lets_everyone_in_and_marks_them`, `test_location_check_over_http` |
 | FR-A12 | `AttendanceService.list_for_lecturer` | `test_two_checkins_from_one_address_are_flagged` |
 | FR-A13, FR-A14 | `ReportService`, `Workbook` | `ReportServiceTest`, `WorkbookTest` |
+| FR-A15 | `SessionService.set_headcount`, `ReportService`, `static/headcount.js` | `test_head_count`, `test_head_count_is_compared_with_check_ins`, `test_head_count_over_http`, `test_detection_model_is_served_and_cached`; detection quality checked by hand (testing strategy, 8.7) |
 | FR-C3 | `CommentService.post` | `test_offline_comment_after_class_end_allowed` |
 | FR-C6, FR-C7 | `CommentService.moderate`, `RateLimiter` | `test_lecturer_marks_answered_and_hides`, `test_comment_flood_is_slowed_down` |
 | FR-P2, FR-P3 | `PollService` | `test_new_poll_closes_previous`, `test_one_vote_per_device` |

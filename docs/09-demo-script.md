@@ -7,7 +7,7 @@ A step-by-step version in Hebrew, with troubleshooting, is in [`מדריך.md`](
 2. In a second terminal: `python3 tools/simulate_class.py --pin 2468 --students 30`.
    The dashboard fills with 30 students, a poll runs, questions and homework arrive.
 3. Walk through the timeline below with your own phone as the one real student.
-4. Delete `classpulse.db` afterwards, so the real demo starts clean.
+4. Delete `classica.db` afterwards, so the real demo starts clean.
 
 ## Before class (5 min of setup)
 1. Connect the laptop to the projector. Turn on a **phone hotspot** and connect the laptop to it, in case the campus Wi-Fi blocks devices from reaching each other.
@@ -21,11 +21,12 @@ A step-by-step version in Hebrew, with troubleshooting, is in [`מדריך.md`](
 |---|---|---|
 | 0:00–1:00 | The problem: attendance, polls and feedback are split across many tools, and nothing is LLM-ready. Show the architecture diagram (`docs/05-components.md`). | Context |
 | 1:00–4:00 | Click **Start**, then **Full screen** on the QR. **The whole class scans.** The counter climbs live. Point out that the QR and the code change every 20 s, so a photo sent home is useless. Try to check in a second student from your own phone to show the rejection. Add one student by hand. Click **Excel** and open the file: three sheets. | 1 (main) |
+| 3:30–4:00 | **Head count:** take a photo of the class from the front in the "Head count" card. Boxes appear on the people; compare "Checked in" with "In the photo". Say that the photo never leaves the laptop and nobody is identified. | 1 (main) |
 | 4:00–5:30 | Click the **Understood?** template and launch it. The class votes and the bars move live. Close the poll. | 3 |
 | 5:30–6:30 | Ask the class to send a question in the Questions tab and upvote. Mark one as answered, hide one. Show one phone in airplane mode that sends once it's back online. | 2 |
 | 6:30–8:00 | Upload `sample-lecture.vtt`, click **Summarise**, then **Share with students**: a Summary tab appears on their phones. Explain the strategy pattern: the LLM if available, otherwise the offline summary. | 4 |
 | 8:00–9:30 | Three volunteers paste answers A, B and C from `homework-samples.md`. Show one student's review, then the lecturer view where A↔C is flagged. | 5 |
-| 9:30–10:00 | Wrap up: 93 tests, zero installs, Hebrew and English, 200 simulated phones, the design documents. Q&A. | n/a |
+| 9:30–10:00 | Wrap up: 97 tests, zero installs, Hebrew and English, 200 simulated phones, the design documents. Q&A. | n/a |
 
 Optional, if someone asks about cheating: switch the language to Hebrew, and explain the location check
 (what it can and can't do is in the tools report, 1.3). Only demo it live if you set up an HTTPS tunnel and tried it beforehand.

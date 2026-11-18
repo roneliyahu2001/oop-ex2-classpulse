@@ -11,6 +11,7 @@ from ..repository import Repository
 
 GEO_MODES = ("off", "flag", "block")
 MIN_RADIUS_M, MAX_RADIUS_M = 30, 5000
+MAX_HEADCOUNT = 2000
 
 
 class SessionService:
@@ -79,6 +80,15 @@ class SessionService:
             radius = max(MIN_RADIUS_M, min(int(radius), MAX_RADIUS_M))
             self._repo.set_geofence(session_id, mode, lat, lon, radius)
         return self._changed(session_id)
+
+    def set_headcount(self, session_id: str, count: int | None) -> ClassSession:
+        """Stores how many people the lecturer's class photo shows. Only the number is kept:
+        the photo is analysed in the lecturer's browser and never uploaded."""
+        self.get(session_id)
+        if count is not None and not 0 <= count <= MAX_HEADCOUNT:
+            raise DomainError("BAD_HEADCOUNT", f"The head count must be 0 to {MAX_HEADCOUNT}")
+        self._repo.set_headcount(session_id, count, None if count is None else self._clock())
+        return self.get(session_id)  # nothing public changed, so no event
 
     def _changed(self, session_id: str) -> ClassSession:
         s = self.get(session_id)

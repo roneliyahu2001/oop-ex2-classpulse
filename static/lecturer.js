@@ -69,6 +69,7 @@ async function openSession(s) {
   $("#trText").value = "";
   for (const id of ["#sumMsg", "#hwMsg", "#attMsg", "#pollMsg", "#geoMsg"]) showMsg($(id), "");
   show("#hwOut", false);
+  HeadCount.reset();
   renderSummary();
   renderGeo();
   (await api("GET", `/api/sessions/${sid}/comments`)).forEach((c) => comments.set(c.id, c));
@@ -146,6 +147,7 @@ $("#geoRadius").addEventListener("change", () => session.geo_mode !== "off" && a
 async function refreshAttendance() {
   const rows = await api("GET", `/api/sessions/${sid}/attendance`);
   $("#presentCount").textContent = rows.length;
+  HeadCount.render();
   const badge = (text, kind = "", title) => h("span", { class: `badge ${kind}`, title }, text);
   put($("#attBody"), rows.map((a, i) => h("tr", {},
     h("td", {}, i + 1),

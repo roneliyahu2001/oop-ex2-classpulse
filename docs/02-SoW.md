@@ -1,8 +1,8 @@
-# 2. Statement of Work (SoW): ClassPulse
+# 2. Statement of Work (SoW): Classica
 
 ## 2.1 Background
 Online teaching tools are fragmented: attendance in one place, polls in another, and recordings
-nobody re-watches. ClassPulse is one small, LLM-ready web app the lecturer opens on the projector
+nobody re-watches. Classica is one small, LLM-ready web app the lecturer opens on the projector
 and students open on their phones by scanning a QR code.
 
 ## 2.2 Objectives
@@ -16,7 +16,7 @@ and students open on their phones by scanning a QR code.
 **In scope**
 - A responsive web app with two views: a student phone view and a lecturer dashboard, in Hebrew and English.
 - A Python backend with SQLite storage and Server-Sent Events.
-- Attendance by rotating QR or typed code, with late marking, manual corrections and an optional location check.
+- Attendance by rotating QR or typed code, with late marking, manual corrections, an optional location check, and a head count from a class photo to compare with the check-ins.
 - Spreadsheets: an Excel workbook and a CSV per class, and a students × classes workbook for the course.
 - Summaries from Zoom / Meet transcript files (.vtt / .srt / .txt), which the lecturer can share with the students.
 - Homework submitted as text or a text file, with similarity analysis and an LLM review (offline fallback when no LLM is available).
@@ -31,7 +31,7 @@ and students open on their phones by scanning a QR code.
 - Multi-lecturer accounts and course management.
 
 **Our own privacy rule (not required by the assignment):** the only personal data stored is the student ID and name.
-No passwords, no photos, and no coordinates (the location check keeps only a distance in metres).
+No passwords, no stored photos, and no coordinates (the location check keeps only a distance in metres; the class photo is analysed in the lecturer's browser and only the head count is saved). The system counts people; it never identifies faces.
 
 ## 2.4 Deliverables
 | # | Deliverable | Location |
@@ -44,7 +44,7 @@ No passwords, no photos, and no coordinates (the location check keeps only a dis
 | D6 | Components | `docs/05-components.md` |
 | D7 | Class and sequence diagrams | `docs/06-class-diagrams.md`, `docs/07-sequence-diagrams.md` |
 | D8 | Testing strategy and tests | `docs/08-testing-strategy.md`, `tests/` |
-| D9 | Demo web app | `run.py`, `classpulse/`, `static/` |
+| D9 | Demo web app | `run.py`, `classica/`, `static/` |
 | D10 | Demo script | `docs/09-demo-script.md` |
 | D11 | Conclusions | `docs/10-conclusions.md` |
 | D12 | Simulator / load test | `tools/simulate_class.py` |
@@ -57,6 +57,7 @@ No passwords, no photos, and no coordinates (the location check keeps only a dis
 | M2 Design | SoW, SRS, use cases, components, diagrams | Every SRS requirement maps to a class |
 | M3 Build | Attendance first, then polls/comments, then AI | `python3 -m unittest` is green |
 | M4 Harden | Rate limits, private staff channel, typed code, location check, Excel, Hebrew | 93 tests green; 200 simulated phones served |
+| M4b Head count | Count people in a class photo in the browser and compare with the check-ins | 97 tests green; tried on sample classroom photos |
 | M5 Rehearse | Simulator run, then a dry run with 3 real phones on a hotspot | Check-in in under 10 s per student |
 | M6 Demo and conclude | Live demo, conclusions written | Attendance spreadsheet produced in class |
 

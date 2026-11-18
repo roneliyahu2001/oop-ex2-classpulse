@@ -202,3 +202,34 @@ sequenceDiagram
   RS-->>H: {review, comparison.to_dict(include_identities=false)}
   H-->>St: 200 JSON (no classmate names)
 ```
+
+## 7.7 Head count from a class photo
+```mermaid
+sequenceDiagram
+  actor Lc as Lecturer
+  participant HC as HeadCount (browser)
+  participant M as COCO-SSD model (browser)
+  participant H as Handler
+  participant S as SessionService
+  participant R as Repository
+
+  Lc->>HC: take or choose a photo
+  opt first time
+    HC->>H: GET /static/vendor/tfjs/... (libraries and model, cached)
+    HC->>M: load()
+  end
+  loop full photo, then 6 overlapping tiles
+    HC->>M: detect(tile)
+    M-->>HC: boxes with class and score
+    HC->>HC: keep "person", drop boxes cut by a tile edge
+  end
+  HC->>HC: merge duplicates, draw numbered boxes
+  Lc->>HC: click to remove a wrong box or add a missed person
+  Lc->>HC: Save count
+  HC->>H: POST /api/sessions/{sid}/headcount {count}
+  H->>S: set_headcount(sid, count)
+  S->>R: set_headcount(sid, count, now)
+  H-->>HC: session (lecturer view)
+  HC->>HC: compare with the check-in count, highlight a gap > 2
+  Note over HC,H: the photo itself never leaves the browser
+```

@@ -8,18 +8,18 @@ import unittest
 import zipfile
 from xml.etree import ElementTree
 
-from classpulse.events import EventBus, staff_channel
-from classpulse.geo import GeoFence, haversine_m, valid_coordinates
-from classpulse.llm import FakeLLMClient
-from classpulse.models import DomainError, Submission
-from classpulse.ratelimit import RateLimiter
-from classpulse.repository import Repository
-from classpulse.services.attendance import safe_cell
-from classpulse.services.review import SimilarityAnalyzer
-from classpulse.services.summary import ExtractiveSummarizer, LLMSummarizer, SummaryService
-from classpulse.text_tools import split_chunks, transcript_to_text
-from classpulse.tokens import TokenRotator
-from classpulse.xlsx import Workbook, column_letter
+from classica.events import EventBus, staff_channel
+from classica.geo import GeoFence, haversine_m, valid_coordinates
+from classica.llm import FakeLLMClient
+from classica.models import DomainError, Submission
+from classica.ratelimit import RateLimiter
+from classica.repository import Repository
+from classica.services.attendance import safe_cell
+from classica.services.review import SimilarityAnalyzer
+from classica.services.summary import ExtractiveSummarizer, LLMSummarizer, SummaryService
+from classica.text_tools import split_chunks, transcript_to_text
+from classica.tokens import TokenRotator
+from classica.xlsx import Workbook, column_letter
 
 from tests.helpers import (CLASSROOM, FAR, HOMEWORK_A, HOMEWORK_B, HOMEWORK_SHORT, NEAR, FakeClock,
                            close_apps, make_app)
@@ -210,6 +210,16 @@ class SessionServiceTest(ServiceTestCase):
         shared = self.app.sessions.save_summary(s.id, "Key points...", published=True)
         self.assertEqual(shared.to_dict()["summary"], "Key points...")
         self.assertFalse(self.app.sessions.save_summary(s.id, "  ", published=True).summary_published)
+
+    def test_head_count(self):
+        s = self.app.sessions.start("x")
+        counted = self.app.sessions.set_headcount(s.id, 27)
+        self.assertEqual((counted.headcount, counted.headcount_at), (27, self.app.sessions._clock()))
+        self.assertNotIn("headcount", counted.to_dict())                     # students never see it
+        self.assertEqual(counted.to_dict(lecturer=True)["headcount"], 27)
+        self.assertIsNone(self.app.sessions.set_headcount(s.id, None).headcount)  # cleared
+        self.assertCode("BAD_HEADCOUNT", lambda: self.app.sessions.set_headcount(s.id, -1))
+        self.assertCode("BAD_HEADCOUNT", lambda: self.app.sessions.set_headcount(s.id, 2001))
 
     def test_homework_task(self):
         s = self.app.sessions.start("x")
@@ -501,19 +511,28 @@ class ReportServiceTest(unittest.TestCase):
         self.assertEqual(rows[1], ["012345678", "Dana Levi", "✓", "Late", "2", "100"])
         self.assertEqual(rows[2], ["222222", "Yossi", "✓", "1", "50"])            # empty cells are omitted
 
-    def test_session_workbook_has_three_sheets(self):
+    def test_session_workbook_has_four_sheets(self):
         p = self.app.polls.create(self.s1.id, "Clear?", ["Yes", "No"])
         self.app.polls.vote(p.id, 0, "d1")
         self.app.comments.post(self.s1.id, "Nice")
         hidden = self.app.comments.post(self.s1.id, "rude")
         self.app.comments.moderate(hidden.id, hidden=True)
         sheets = read_xlsx(self.app.reports.session_workbook(self.s1.id))
-        self.assertEqual(list(sheets), ["Attendance", "Polls", "Comments"])
+        self.assertEqual(list(sheets), ["Overview", "Attendance", "Polls", "Comments"])
+        self.assertIn(["Checked in", "2"], sheets["Overview"])
+        self.assertIn(["People in the class photo", "No photo counted"], sheets["Overview"])
         self.assertEqual(sheets["Attendance"][1][:3], ["1", "012345678", "Dana"])
         self.assertEqual(sheets["Polls"][1], ["Clear?", "Yes", "1", "100"])
         self.assertEqual(len(sheets["Comments"]), 2)                               # header + visible one
         self.assertEqual(list(read_xlsx(self.app.reports.session_workbook(self.s1.id, "he"))),
-                         ["נוכחות", "סקרים", "שאלות והערות"])
+                         ["סיכום", "נוכחות", "סקרים", "שאלות והערות"])
+
+    def test_head_count_is_compared_with_check_ins(self):
+        self.app.sessions.set_headcount(self.s1.id, 1)
+        overview = read_xlsx(self.app.reports.session_workbook(self.s1.id))["Overview"]
+        self.assertIn(["People in the class photo", "1"], overview)
+        self.assertIn(["Check-ins minus people in the photo", "1"], overview)   # 2 checked in, 1 in the photo
+        self.assertEqual(self.app.reports.course_matrix()["sessions"][0]["headcount"], 1)
 
 
 VTT = """WEBVTT

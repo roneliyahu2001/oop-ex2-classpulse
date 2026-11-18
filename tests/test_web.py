@@ -6,7 +6,7 @@ import unittest
 import urllib.error
 import urllib.request
 
-from classpulse.web import make_server
+from classica.web import make_server
 from tests.helpers import CLASSROOM, FAR, HOMEWORK_A, HOMEWORK_B, NEAR, close_apps, make_app
 from tools.simulate_class import simulate
 
@@ -64,13 +64,13 @@ class WebTest(unittest.TestCase):
         c = Client(self.base)
         for path in ["/", "/lecturer", "/static/style.css", "/static/i18n.js", "/static/vendor/qrcode.min.js"]:
             self.assertEqual(c.call("GET", path)[0], 200, path)
-        self.assertEqual(c.call("GET", "/static/../classpulse/app.py")[0], 404)
+        self.assertEqual(c.call("GET", "/static/../classica/app.py")[0], 404)
         self.assertEqual(c.call("GET", "/static/../run.py")[0], 404)
 
     def test_page_sets_device_cookie_and_security_headers(self):
         req = urllib.request.urlopen(self.base + "/", timeout=5)
         with req:
-            self.assertIn("cp_dev=", req.headers["Set-Cookie"])
+            self.assertIn("ca_dev=", req.headers["Set-Cookie"])
             self.assertIn("HttpOnly", req.headers["Set-Cookie"])
             self.assertIn("default-src 'self'", req.headers["Content-Security-Policy"])
             self.assertEqual(req.headers["X-Content-Type-Options"], "nosniff")
@@ -211,6 +211,28 @@ class WebTest(unittest.TestCase):
         self.assertEqual(lect.call("POST", f"/api/sessions/{sid}/geofence", {"mode": "off"})[1]["geo_mode"], "off")
         self.assertEqual(checkin(silent, "111111")[0], 201)
         lect.call("POST", f"/api/sessions/{sid}/end")
+
+    def test_head_count_over_http(self):
+        lect, student = self.lecturer(), Client(self.base)
+        sid = self.new_class(lect, "headcount")
+        self.assertEqual(student.call("POST", f"/api/sessions/{sid}/headcount", {"count": 3})[0], 401)
+        st, s = lect.call("POST", f"/api/sessions/{sid}/headcount", {"count": 24})
+        self.assertEqual((st, s["headcount"]), (200, 24))
+        for bad in [-5, 2.5, "24", True]:
+            self.assertEqual(lect.call("POST", f"/api/sessions/{sid}/headcount", {"count": bad})[0], 400, bad)
+        self.assertIsNone(lect.call("POST", f"/api/sessions/{sid}/headcount", {"count": None})[1]["headcount"])
+        self.assertNotIn("headcount", student.call("GET", f"/api/sessions/{sid}")[1]["session"])
+        lect.call("POST", f"/api/sessions/{sid}/end")
+
+    def test_detection_model_is_served_and_cached(self):
+        c = Client(self.base)
+        for path in ["/static/vendor/tfjs/tf.min.js", "/static/vendor/tfjs/coco-ssd.min.js",
+                     "/static/vendor/tfjs/ssdlite/model.json", "/static/vendor/tfjs/ssdlite/group1-shard5of5",
+                     "/static/headcount.js"]:
+            self.assertEqual(c.call("GET", path)[0], 200, path)
+        self.assertEqual(c.headers["Cache-Control"], "no-store")                 # our own code: always fresh
+        c.call("GET", "/static/vendor/tfjs/ssdlite/model.json")
+        self.assertEqual(c.headers["Cache-Control"], "max-age=86400")
 
     def test_comment_flood_is_slowed_down(self):
         lect, spammer, other = self.lecturer(), Client(self.base), Client(self.base)

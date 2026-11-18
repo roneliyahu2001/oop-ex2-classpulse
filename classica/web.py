@@ -16,18 +16,18 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
-from .app import ClassPulseApp
+from .app import ClassicaApp
 from .events import staff_channel
 from .models import DomainError
 from .ratelimit import RateLimiter
 
 STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
 MAX_BODY = 2 * 1024 * 1024
-DEVICE_COOKIE = "cp_dev"
-LECTURER_COOKIE = "cp_lect"
+DEVICE_COOKIE = "ca_dev"
+LECTURER_COOKIE = "ca_lect"
 LOOPBACK = ("127.0.0.1", "::1", "::ffff:127.0.0.1")
 XLSX_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-CSP = "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:"
+CSP = "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:"
 
 ROUTES: list[tuple[str, re.Pattern, str, bool]] = []  # (method, pattern, handler name, lecturer only)
 
@@ -50,9 +50,9 @@ def _flag(value) -> bool | None:
 
 
 class Handler(BaseHTTPRequestHandler):
-    app: ClassPulseApp  # injected by make_server
+    app: ClassicaApp  # injected by make_server
     protocol_version = "HTTP/1.1"
-    server_version = "ClassPulse/2.0"
+    server_version = "Classica/2.0"
     quiet = False
 
     # ---- plumbing -------------------------------------------------------
@@ -130,7 +130,8 @@ class Handler(BaseHTTPRequestHandler):
         self.send_response(status)
         self.send_header("Content-Type", ctype)
         self.send_header("Content-Length", str(len(payload)))
-        self.send_header("Cache-Control", "no-store")
+        cacheable = self.path.startswith("/static/vendor/")  # 20 MB of libraries and model: load once
+        self.send_header("Cache-Control", "max-age=86400" if cacheable else "no-store")
         self.send_header("X-Content-Type-Options", "nosniff")
         if hasattr(self, "_new_device"):
             self.send_header("Set-Cookie", f"{DEVICE_COOKIE}={self._new_device}; Path=/; "
@@ -234,6 +235,14 @@ class Handler(BaseHTTPRequestHandler):
         s = self.app.sessions.set_geofence(sid, str(b.get("mode", "")), _number(b.get("lat")),
                                            _number(b.get("lon")), int(_number(b.get("radius")) or 150))
         self.json(s.to_dict(lecturer=True))
+
+    @route("POST", r"/api/sessions/(\w+)/headcount", lecturer=True)
+    def set_headcount(self, sid):
+        raw = self.body().get("count")
+        count = _number(raw)
+        if raw is not None and (count is None or count != int(count)):
+            raise DomainError("BAD_HEADCOUNT", "count must be a whole number")
+        self.json(self.app.sessions.set_headcount(sid, None if raw is None else int(count)).to_dict(lecturer=True))
 
     @route("GET", r"/api/sessions/(\w+)/qr", lecturer=True)
     def qr(self, sid):
@@ -409,7 +418,7 @@ class Server(ThreadingHTTPServer):
     request_queue_size = 128  # a whole class scans within the same few seconds
 
 
-def make_server(app: ClassPulseApp, host: str = "0.0.0.0", port: int = 8000,
+def make_server(app: ClassicaApp, host: str = "0.0.0.0", port: int = 8000,
                 quiet: bool = False) -> ThreadingHTTPServer:
     handler = type("BoundHandler", (Handler,), {"app": app, "quiet": quiet})
     return Server((host, port), handler)
