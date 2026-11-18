@@ -103,8 +103,12 @@ async function refreshQr() {
     if (e.status === 401) location.reload();  // the server restarted: back to the login screen
   }
 }
-$("#fsBtn").addEventListener("click", () => $("#qrCard").classList.toggle("fullscreen"));
-addEventListener("keydown", (e) => e.key === "Escape" && $("#qrCard").classList.remove("fullscreen"));
+function setFullscreen(on) {
+  $("#qrCard").classList.toggle("fullscreen", on);
+  $("#fsBtn").textContent = t(on ? "l.qr.exit" : "l.qr.full");
+}
+$("#fsBtn").addEventListener("click", () => setFullscreen(!$("#qrCard").classList.contains("fullscreen")));
+addEventListener("keydown", (e) => e.key === "Escape" && setFullscreen(false));
 
 // ---- location check -------------------------------------------------------
 function laptopLocation() {

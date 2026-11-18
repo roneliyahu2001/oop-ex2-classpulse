@@ -133,3 +133,47 @@ form.add { margin-top: 10px; }
                background: var(--accent); color: var(--accent-text); border: 1px solid var(--accent); font-size: 16px; }
 .file-button input { display: none; }
 .hc-canvas { width: 100%; height: auto; border-radius: var(--radius); margin: 8px 0; cursor: crosshair; }
+
+/* ---- check-in strip: a full-width band above the cards, QR at the left edge ---- */
+.qr-strip { --page-dir: ltr; direction: ltr; display: grid; grid-template-columns: auto 1fr auto; gap: 18px 28px;
+            align-items: center; background: var(--head); color: var(--head-text); border-radius: var(--radius);
+            padding: 18px 22px; margin-bottom: 16px; border-bottom: 4px solid var(--gold); }
+[dir="rtl"] .qr-strip > * { direction: rtl; }
+.qs-qr { width: 210px; display: flex; flex-direction: column; gap: 6px; }
+.qs-qr svg { width: 100%; height: auto; background: #fff; padding: 8px; border-radius: 6px; display: block; }
+.qr-strip .countdown { background: color-mix(in srgb, var(--head-text) 20%, transparent); }
+.qr-strip .countdown div { background: var(--gold); }
+.qs-info { display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
+.qs-title { font-size: 22px; font-weight: 700; }
+.qr-strip .nocam { text-align: start; color: color-mix(in srgb, var(--head-text) 75%, transparent); }
+.qr-strip .nocam .code { color: var(--gold); font-size: 52px; letter-spacing: 6px; line-height: 1.1; direction: ltr; text-align: start; }
+.qs-btn { background: transparent; color: var(--head-text); border-color: color-mix(in srgb, var(--head-text) 40%, transparent); }
+.qs-count { display: flex; flex-direction: column; align-items: center; padding: 10px 22px;
+            border-inline-start: 1px solid color-mix(in srgb, var(--head-text) 25%, transparent); }
+.qr-strip .count { font-size: 64px; font-weight: 800; line-height: 1; }
+.qs-label { color: color-mix(in srgb, var(--head-text) 75%, transparent); }
+.qr-strip .geo { grid-column: 1 / -1; border-top-color: color-mix(in srgb, var(--head-text) 20%, transparent); }
+.qr-strip .geo label { color: color-mix(in srgb, var(--head-text) 80%, transparent); }
+.qr-strip .geo select, .qr-strip .geo input { background: color-mix(in srgb, var(--head-text) 10%, transparent);
+            color: var(--head-text); border-color: color-mix(in srgb, var(--head-text) 30%, transparent); }
+.qr-strip .geo select option { color: #1e2a23; }
+.qr-strip.fullscreen { position: fixed; inset: 0; z-index: 10; margin: 0; border-radius: 0; border: 0;
+            grid-template-columns: auto auto; justify-content: center; align-content: center; gap: 40px 60px; }
+.qr-strip.fullscreen .qs-qr { width: min(72vh, 52vw); }
+.qr-strip.fullscreen .nocam .code { font-size: 88px; }
+.qr-strip.fullscreen .qs-title { font-size: 34px; }
+.qr-strip.fullscreen .qs-count { border: 0; padding: 0; align-items: flex-start; }
+.qr-strip.fullscreen .qs-count .count { font-size: 110px; }
+.qr-strip.fullscreen .geo { display: none; }
+.qr-strip.fullscreen .qs-info { grid-row: 1; grid-column: 2; }
+.qr-strip.fullscreen .qs-count { grid-row: 2; grid-column: 2; }
+.qr-strip.fullscreen .qs-qr { grid-row: 1 / span 2; grid-column: 1; }
+@media (max-width: 760px) {
+  .qr-strip { grid-template-columns: 1fr; justify-items: center; }
+  .qs-info { align-items: center; }
+  .qr-strip .nocam, .qr-strip .nocam .code { text-align: center; }
+  .qs-count { border: 0; }
+}
+.qr-strip .msg.ok { background: color-mix(in srgb, #7fe0b0 16%, transparent); color: #b9f0d4; }
+.qr-strip .msg.warn { background: color-mix(in srgb, var(--gold) 20%, transparent); color: #f3d79c; }
+.qr-strip .msg.err { background: color-mix(in srgb, #ff8a7a 18%, transparent); color: #ffc2b8; }

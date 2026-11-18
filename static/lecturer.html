@@ -46,20 +46,24 @@
     </section>
 
     <section id="dash" class="hidden">
-      <div class="grid">
-        <div class="card qr-box" id="qrCard">
-          <h2 data-i18n="l.qr.h">Scan to check in</h2>
+      <section class="qr-strip" id="qrCard">
+        <div class="qs-qr">
           <div id="qr"></div>
           <div class="countdown"><div id="countBar"></div></div>
+        </div>
+        <div class="qs-info">
+          <div class="qs-title" data-i18n="l.qr.h">Scan to check in</div>
           <div class="nocam">
             <span id="noCamText"></span>
             <span class="code" id="qrCode" dir="ltr"></span>
           </div>
-          <div class="row">
-            <button id="fsBtn" data-i18n="l.qr.full">Full screen</button>
-            <span class="count" id="presentCount">0</span><span class="muted" data-i18n="l.qr.present">present</span>
-          </div>
-          <div class="geo">
+          <button id="fsBtn" class="qs-btn" data-i18n="l.qr.full">Full screen</button>
+        </div>
+        <div class="qs-count">
+          <span class="count" id="presentCount">0</span>
+          <span class="qs-label" data-i18n="l.qr.present">present</span>
+        </div>
+        <div class="geo">
             <div class="row">
               <label for="geoMode" data-i18n="l.geo.label">Location check</label>
               <select id="geoMode" class="auto">
@@ -72,8 +76,9 @@
             </div>
             <div id="geoMsg" aria-live="polite"></div>
           </div>
-        </div>
+      </section>
 
+      <div class="grid">
         <div class="card">
           <div class="row between">
             <h2 data-i18n="l.att.h">Attendance</h2>
